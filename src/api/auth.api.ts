@@ -54,7 +54,7 @@ export function getNewAccessToken(): Promise<
 }
 
 // 7. Update Profile
-export function updateProfile(payload: FormData): Promise<ApiResponse<any>> {
+export function updateProfile(payload: FormData): Promise<ApiResponse<IUser>> {
   return apiClient("/user/update-profile", {
     method: "PATCH",
     body: payload,
@@ -93,7 +93,7 @@ export function recruiterRegistration(
 
 export function recruiterVerification(
   payload: VerifyRecruiterEmailPayload,
-): Promise<ApiResponse<any>> {
+): Promise<ApiResponse<AuthResponse>> {
   return apiClient("/auth/verify-recruiter-email", {
     method: "POST",
     body: payload,
@@ -106,5 +106,3 @@ export function changePassword(
 ): Promise<ApiResponse<null>> {
   return apiClient("/auth/change-password", { method: "POST", body: payload });
 }
-
-

@@ -1,3 +1,4 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   changePassword,
   getMe,
@@ -12,7 +13,6 @@ import {
   userResetPassword,
   userVerification,
 } from "@/api/auth.api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 // Hook: User Login
 export function useLogin() {
@@ -102,5 +102,12 @@ export function useResetPassword() {
 export function useChangePassword() {
   return useMutation({
     mutationFn: changePassword,
+  });
+}
+
+// Hook: Refresh Access Token
+export function useRefreshToken() {
+  return useMutation({
+    mutationFn: getNewAccessToken,
   });
 }

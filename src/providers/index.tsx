@@ -1,14 +1,17 @@
 "use client";
 
-import { ReactNode } from "react";
-import QueryProvider from "./query.provider";
+import { ThemeProvider } from "next-themes";
+import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
+import QueryProvider from "./query.provider";
 
 export default function Providers({ children }: { children: ReactNode }) {
   return (
-    <QueryProvider>
-      {children}
-      <Toaster />
-    </QueryProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <QueryProvider>
+        {children}
+        <Toaster richColors position="top-right" />
+      </QueryProvider>
+    </ThemeProvider>
   );
 }
