@@ -174,6 +174,11 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
         avatarUrl?: string;
       };
     };
+    profile?: {
+      name?: string;
+      companyName?: string;
+      avatarUrl?: string;
+    };
     adminProfile?: { name?: string; avatarUrl?: string };
     recruiterProfile?: {
       name?: string;
@@ -185,20 +190,26 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
     role?: string;
   } | null;
 
+  const profile = rawUser?.profile;
   const user = rawUser?.user || rawUser;
   const userName =
+    profile?.name ||
     user?.adminProfile?.name ||
     user?.recruiterProfile?.name ||
-    user?.name ||
+    rawUser?.adminProfile?.name ||
+    rawUser?.recruiterProfile?.name ||
+    rawUser?.name ||
     user?.email?.split("@")[0] ||
     (role === "ADMIN" ? "Admin" : "Recruiter");
 
   const avatarUrl =
-    user?.adminProfile?.avatarUrl || user?.recruiterProfile?.avatarUrl;
+    profile?.avatarUrl ||
+    user?.adminProfile?.avatarUrl ||
+    user?.recruiterProfile?.avatarUrl;
   const subtitle =
     role === "ADMIN"
       ? "Super Admin"
-      : user?.recruiterProfile?.companyName || "Hiring Team";
+      : profile?.companyName || user?.recruiterProfile?.companyName || "Hiring Team";
 
   const handleLogout = async () => {
     try {
