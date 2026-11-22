@@ -46,7 +46,7 @@ export function logout(): Promise<ApiResponse<null>> {
 
 // 6. Refresh Token
 export function getNewAccessToken(): Promise<
-  ApiResponse<{ accessToken: string }>
+  ApiResponse<{ accessToken: string; refreshToken?: string }>
 > {
   return apiClient("/auth/refresh-token", {
     method: "POST",

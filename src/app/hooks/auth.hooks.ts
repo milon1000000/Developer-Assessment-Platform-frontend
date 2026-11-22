@@ -112,7 +112,15 @@ export function useChangePassword() {
 
 // Hook: Refresh Access Token
 export function useRefreshToken() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: getNewAccessToken,
+    onSuccess: (data) => {
+      if (data?.data?.accessToken) {
+        setAuthToken(data.data.accessToken);
+      }
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+    },
   });
 }
+export const useGetNewAccessToken = useRefreshToken;
