@@ -11,13 +11,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type {
-  CreateGlobalQuestionPayload,
-  IGlobalQuestion,
-  McqOption,
-  QuestionDifficulty,
-  QuestionType,
-  TestCase,
+import {
+  type CreateGlobalQuestionPayload,
+  type IGlobalQuestion,
+  type McqOption,
+  POPULAR_LANGUAGE_SUGGESTIONS,
+  type QuestionDifficulty,
+  type QuestionType,
+  type TestCase,
+  getLanguageInfo,
 } from "@/types/question.type";
 import {
   createQuestionSchema,
@@ -37,24 +39,6 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-
-export const SUPPORTED_LANGUAGES = [
-  { id: "javascript", label: "JavaScript", runtime: "Node.js 20" },
-  { id: "typescript", label: "TypeScript", runtime: "TS 5.x" },
-  { id: "python", label: "Python", runtime: "Python 3.12" },
-  { id: "cpp", label: "C++", runtime: "GCC 13" },
-  { id: "java", label: "Java", runtime: "OpenJDK 21" },
-] as const;
-
-export type SupportedLang = (typeof SUPPORTED_LANGUAGES)[number]["id"];
-
-export const DEFAULT_STARTER_CODES: Record<string, string> = {
-  javascript: `function solution(args) {\n  // Write your code here\n  return null;\n}`,
-  typescript: `function solution(args: any): any {\n  // Write your code here\n  return null;\n}`,
-  python: `def solution(args):\n    # Write your code here\n    pass`,
-  cpp: `#include <iostream>\n#include <vector>\n\nusing namespace std;\n\nclass Solution {\npublic:\n    void solution() {\n        // Write your code here\n    }\n};`,
-  java: `import java.util.*;\n\nclass Solution {\n    public Object solution(Object args) {\n        // Write your code here\n        return null;\n    }\n}`,
-};
 
 interface QuestionStudioDrawerProps {
   isOpen: boolean;
@@ -158,12 +142,14 @@ export function QuestionStudioDrawer({
   const [problemStatement, setProblemStatement] = React.useState("");
   const [constraints, setConstraints] = React.useState("");
 
-  // Coding Specific
-  const [activeLang, setActiveLang] =
-    React.useState<SupportedLang>("javascript");
+  // Coding Specific: Dynamic Multi-Language Starter Code
+  const [activeLang, setActiveLang] = React.useState<string>("javascript");
   const [starterCodes, setStarterCodes] = React.useState<
     Record<string, string>
-  >(DEFAULT_STARTER_CODES);
+  >({
+    javascript: getLanguageInfo("javascript").template,
+  });
+  const [newLangInput, setNewLangInput] = React.useState("");
 
   const [testCases, setTestCases] = React.useState<TestCase[]>([
     {
@@ -196,9 +182,7 @@ export function QuestionStudioDrawer({
       setConstraints(questionToEdit.constraints || "");
 
       const rawStarter = questionToEdit.starterCode as unknown;
-      const initialStarter: Record<string, string> = {
-        ...DEFAULT_STARTER_CODES,
-      };
+      const initialStarter: Record<string, string> = {};
       if (rawStarter && typeof rawStarter === "object") {
         Object.entries(rawStarter as Record<string, unknown>).forEach(
           ([key, val]) => {
@@ -212,18 +196,8 @@ export function QuestionStudioDrawer({
       }
       setStarterCodes(initialStarter);
 
-      // Determine active language: pick first configured or default to javascript
-      const configuredLang =
-        SUPPORTED_LANGUAGES.find(
-          (l) =>
-            rawStarter &&
-            typeof rawStarter === "object" &&
-            Boolean(
-              (rawStarter as Record<string, unknown>)[l.id] &&
-                String((rawStarter as Record<string, unknown>)[l.id]).trim(),
-            ),
-        )?.id || "javascript";
-      setActiveLang(configuredLang);
+      const langs = Object.keys(initialStarter);
+      setActiveLang(langs.length > 0 ? langs[0] : "");
 
       const normalizedTc = normalizeTestCases(questionToEdit.testCases);
       setTestCases(
@@ -261,8 +235,11 @@ export function QuestionStudioDrawer({
       setTags(["Algorithms"]);
       setProblemStatement("");
       setConstraints("");
-      setStarterCodes(DEFAULT_STARTER_CODES);
+      setStarterCodes({
+        javascript: getLanguageInfo("javascript").template,
+      });
       setActiveLang("javascript");
+      setNewLangInput("");
       setTestCases([
         {
           input: "nums = [2, 7, 11, 15], target = 9",
@@ -295,6 +272,51 @@ export function QuestionStudioDrawer({
 
   const handleRemoveTag = (tagToRemove: string) => {
     setTags(tags.filter((t) => t !== tagToRemove));
+  };
+
+  // Dynamic Starter Code Language Handlers
+  const handleAddLanguage = (langName: string) => {
+    const clean = langName.trim();
+    if (!clean) return;
+    const key = clean.toLowerCase();
+    const info = getLanguageInfo(clean);
+
+    if (starterCodes[key] !== undefined) {
+      toast.info(`Language "${info.label}" is already added.`);
+      setActiveLang(key);
+      setNewLangInput("");
+      return;
+    }
+
+    setStarterCodes((prev) => ({
+      ...prev,
+      [key]: info.template,
+    }));
+    setActiveLang(key);
+    setNewLangInput("");
+    toast.success(`Added ${info.label} starter template`);
+  };
+
+  const handleRemoveLanguage = (langKey: string) => {
+    const info = getLanguageInfo(langKey);
+    const updated = { ...starterCodes };
+    delete updated[langKey];
+    setStarterCodes(updated);
+
+    if (activeLang === langKey) {
+      const remaining = Object.keys(updated);
+      setActiveLang(remaining.length > 0 ? remaining[0] : "");
+    }
+    toast.info(`Removed ${info.label} starter code`);
+  };
+
+  const handleResetLanguage = (langKey: string) => {
+    const info = getLanguageInfo(langKey);
+    setStarterCodes((prev) => ({
+      ...prev,
+      [langKey]: info.template,
+    }));
+    toast.info(`Reset ${info.label} boilerplate to default`);
   };
 
   // Dynamic Test Case Handlers
@@ -669,116 +691,200 @@ export function QuestionStudioDrawer({
           {/* CONDITIONAL: CODING MODE */}
           {type === "CODING" && (
             <div className="space-y-5 pt-3 border-t border-border/70">
-              {/* Multi-Language Starter Code Section */}
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between">
+              {/* Dynamic Multi-Language Starter Code Section */}
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                   <div>
                     <Label className="flex items-center gap-1.5 font-semibold text-xs sm:text-sm">
                       <Terminal className="size-3.5 text-primary" />
-                      Starter Code Templates
+                      Starter Code Templates ({Object.keys(starterCodes).length}
+                      )
                     </Label>
                     <p className="text-[11px] text-muted-foreground">
-                      Configure boilerplate code across candidate-supported
-                      languages
+                      Add any programming language you want candidates to solve
+                      this problem in
                     </p>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] font-mono text-muted-foreground border-border/70 bg-muted/40"
-                  >
-                    {
-                      SUPPORTED_LANGUAGES.find((l) => l.id === activeLang)
-                        ?.runtime
-                    }
-                  </Badge>
-                </div>
-
-                {/* Language Switcher Tabs */}
-                <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-muted/40 border border-border/70">
-                  {SUPPORTED_LANGUAGES.map((lang) => {
-                    const isActive = activeLang === lang.id;
-                    const isConfigured = Boolean(starterCodes[lang.id]?.trim());
-                    const isCustomized =
-                      isConfigured &&
-                      starterCodes[lang.id] !== DEFAULT_STARTER_CODES[lang.id];
-
-                    return (
-                      <button
-                        key={lang.id}
-                        type="button"
-                        onClick={() => setActiveLang(lang.id)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                          isActive
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground hover:bg-background/80"
-                        }`}
-                      >
-                        <span>{lang.label}</span>
-                        {isConfigured && (
-                          <span
-                            className={`size-1.5 rounded-full ${
-                              isActive
-                                ? "bg-primary-foreground"
-                                : isCustomized
-                                  ? "bg-emerald-500"
-                                  : "bg-muted-foreground/50"
-                            }`}
-                            title={
-                              isCustomized
-                                ? "Custom starter code configured"
-                                : "Default boilerplate active"
-                            }
-                          />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Editor Container */}
-                <div className="rounded-xl border border-border/80 bg-zinc-950 overflow-hidden shadow-inner focus-within:ring-1 focus-within:ring-primary/50">
-                  <div className="flex items-center justify-between px-3.5 py-1.5 border-b border-zinc-800 bg-zinc-900/80 text-[11px] font-mono text-zinc-400">
-                    <span className="flex items-center gap-1.5">
-                      <Code2 className="size-3 text-primary" />
-                      {
-                        SUPPORTED_LANGUAGES.find((l) => l.id === activeLang)
-                          ?.label
-                      }{" "}
-                      Boilerplate
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStarterCodes((prev) => ({
-                          ...prev,
-                          [activeLang]: DEFAULT_STARTER_CODES[activeLang] || "",
-                        }));
-                        toast.info(
-                          `Reset ${SUPPORTED_LANGUAGES.find((l) => l.id === activeLang)?.label} to default boilerplate`,
-                        );
-                      }}
-                      className="flex items-center gap-1 text-[10px] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+                  {activeLang && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-mono text-muted-foreground border-border/70 bg-muted/40 self-start sm:self-auto"
                     >
-                      <RotateCcw className="size-2.5" />
-                      Reset to Default
-                    </button>
-                  </div>
-                  <Textarea
-                    rows={6}
-                    value={starterCodes[activeLang] || ""}
-                    onChange={(e) =>
-                      setStarterCodes((prev) => ({
-                        ...prev,
-                        [activeLang]: e.target.value,
-                      }))
-                    }
-                    placeholder={`// Write starter code template for ${
-                      SUPPORTED_LANGUAGES.find((l) => l.id === activeLang)
-                        ?.label
-                    }...`}
-                    className="font-mono text-xs bg-transparent border-0 text-zinc-200 focus-visible:ring-0 focus-visible:ring-offset-0 resize-y p-3.5 leading-relaxed rounded-none"
-                  />
+                      {getLanguageInfo(activeLang).runtime}
+                    </Badge>
+                  )}
                 </div>
+
+                {/* Add Language Bar & Quick Suggestions */}
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Input
+                        placeholder="Add language (e.g. Python, Go, Rust, PHP, C#)..."
+                        value={newLangInput}
+                        onChange={(e) => setNewLangInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddLanguage(newLangInput);
+                          }
+                        }}
+                        list="available-languages-list"
+                        className="text-xs h-8"
+                      />
+                      <datalist id="available-languages-list">
+                        {POPULAR_LANGUAGE_SUGGESTIONS.map((k) => (
+                          <option key={k} value={getLanguageInfo(k).label} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddLanguage(newLangInput)}
+                      className="h-8 text-xs gap-1 shrink-0 border-primary/40 text-primary hover:bg-primary/10"
+                    >
+                      <Plus className="size-3" />
+                      Add Language
+                    </Button>
+                  </div>
+
+                  {/* Quick-add chips for unadded popular languages */}
+                  {POPULAR_LANGUAGE_SUGGESTIONS.filter(
+                    (k) => starterCodes[k] === undefined,
+                  ).length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <span className="text-[10px] text-muted-foreground font-medium">
+                        Quick add:
+                      </span>
+                      {POPULAR_LANGUAGE_SUGGESTIONS.filter(
+                        (k) => starterCodes[k] === undefined,
+                      )
+                        .slice(0, 6)
+                        .map((k) => {
+                          const info = getLanguageInfo(k);
+                          return (
+                            <button
+                              key={k}
+                              type="button"
+                              onClick={() => handleAddLanguage(k)}
+                              className="px-2 py-0.5 text-[10px] rounded-md border border-border/70 bg-background/80 hover:bg-muted/80 text-muted-foreground hover:text-foreground font-medium transition-colors cursor-pointer flex items-center gap-1"
+                            >
+                              <Plus className="size-2.5" />
+                              {info.label}
+                            </button>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Language Tabs List or Empty State */}
+                {Object.keys(starterCodes).length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border/80 p-5 text-center bg-muted/20">
+                    <Terminal className="size-5 text-muted-foreground mx-auto mb-1.5" />
+                    <p className="text-xs font-semibold text-foreground">
+                      No starter code languages added
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Type any language above or click a quick suggestion to add
+                      starter templates for candidates.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Active Language Tabs */}
+                    <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-muted/40 border border-border/70">
+                      {Object.keys(starterCodes).map((langKey) => {
+                        const isActive = activeLang === langKey;
+                        const info = getLanguageInfo(langKey);
+                        const hasCode = Boolean(starterCodes[langKey]?.trim());
+
+                        return (
+                          <div
+                            key={langKey}
+                            onClick={() => setActiveLang(langKey)}
+                            className={`flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                              isActive
+                                ? "bg-primary text-primary-foreground shadow-sm"
+                                : "text-muted-foreground hover:text-foreground hover:bg-background/80"
+                            }`}
+                          >
+                            <span>{info.label}</span>
+                            {hasCode && (
+                              <span
+                                className={`size-1.5 rounded-full ${
+                                  isActive
+                                    ? "bg-primary-foreground"
+                                    : "bg-emerald-500"
+                                }`}
+                              />
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveLanguage(langKey);
+                              }}
+                              className={`p-0.5 rounded-full hover:bg-black/20 dark:hover:bg-white/20 transition-colors ml-0.5 cursor-pointer ${
+                                isActive
+                                  ? "text-primary-foreground/80 hover:text-primary-foreground"
+                                  : "text-muted-foreground hover:text-foreground"
+                              }`}
+                              title={`Remove ${info.label}`}
+                            >
+                              <X className="size-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Editor Container for Active Language */}
+                    {activeLang && starterCodes[activeLang] !== undefined && (
+                      <div className="rounded-xl border border-border/80 bg-zinc-950 overflow-hidden shadow-inner focus-within:ring-1 focus-within:ring-primary/50">
+                        <div className="flex items-center justify-between px-3.5 py-1.5 border-b border-zinc-800 bg-zinc-900/80 text-[11px] font-mono text-zinc-400">
+                          <span className="flex items-center gap-1.5">
+                            <Code2 className="size-3 text-primary" />
+                            {getLanguageInfo(activeLang).label} Boilerplate
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleResetLanguage(activeLang)}
+                              className="flex items-center gap-1 text-[10px] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+                            >
+                              <RotateCcw className="size-2.5" />
+                              Reset Default
+                            </button>
+                            <span className="text-zinc-700">|</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveLanguage(activeLang)}
+                              className="flex items-center gap-1 text-[10px] text-rose-400/80 hover:text-rose-400 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="size-2.5" />
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                        <Textarea
+                          rows={6}
+                          value={starterCodes[activeLang] || ""}
+                          onChange={(e) =>
+                            setStarterCodes((prev) => ({
+                              ...prev,
+                              [activeLang]: e.target.value,
+                            }))
+                          }
+                          placeholder={`// Write starter code template for ${getLanguageInfo(activeLang).label}...`}
+                          className="font-mono text-xs bg-transparent border-0 text-zinc-200 focus-visible:ring-0 focus-visible:ring-offset-0 resize-y p-3.5 leading-relaxed rounded-none"
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               {/* Dynamic Test Cases Builder */}

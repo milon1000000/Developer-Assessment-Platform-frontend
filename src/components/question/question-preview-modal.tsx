@@ -4,7 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { IGlobalQuestion } from "@/types/question.type";
+import { type IGlobalQuestion, getLanguageInfo } from "@/types/question.type";
 import {
   AlertCircle,
   Check,
@@ -272,14 +272,12 @@ export function QuestionPreviewModal({
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        const code =
-                          starterCodeMap[selectedLang] ||
-                          starterCodeMap[availableLangs[0]] ||
-                          "";
+                        const activeKey = selectedLang || availableLangs[0];
+                        const code = starterCodeMap[activeKey] || "";
                         if (code) {
                           navigator.clipboard.writeText(code);
                           toast.success(
-                            `Copied ${selectedLang.toUpperCase()} template!`,
+                            `Copied ${getLanguageInfo(activeKey).label} template!`,
                           );
                         }
                       }}
@@ -296,13 +294,7 @@ export function QuestionPreviewModal({
                       {availableLangs.map((lang) => {
                         const isSelected =
                           (selectedLang || availableLangs[0]) === lang;
-                        const labelMap: Record<string, string> = {
-                          javascript: "JavaScript",
-                          typescript: "TypeScript",
-                          python: "Python",
-                          cpp: "C++",
-                          java: "Java",
-                        };
+                        const label = getLanguageInfo(lang).label;
                         return (
                           <button
                             key={lang}
@@ -314,7 +306,7 @@ export function QuestionPreviewModal({
                                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"
                             }`}
                           >
-                            {labelMap[lang] || lang.toUpperCase()}
+                            {label}
                           </button>
                         );
                       })}
