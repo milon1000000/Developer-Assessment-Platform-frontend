@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { RegisterForm } from "@/components/form/register-form";
 
@@ -15,7 +16,15 @@ export default function RegisterPage() {
       subtitle="Join top engineering teams and developers on the leading screening platform"
       badgeText="Developer & Recruiter Onboarding"
     >
-      <RegisterForm />
+      <Suspense
+        fallback={
+          <div className="flex h-64 w-full items-center justify-center">
+            <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        }
+      >
+        <RegisterForm />
+      </Suspense>
     </AuthShell>
   );
 }

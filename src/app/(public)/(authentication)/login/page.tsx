@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { LoginForm } from "@/components/form/login-form";
 
@@ -15,7 +16,15 @@ export default function LoginPage() {
       subtitle="Sign in to access your assessments, candidates, and live coding challenges"
       badgeText="DevAssess Auth Gateway"
     >
-      <LoginForm />
+      <Suspense
+        fallback={
+          <div className="flex h-64 w-full items-center justify-center">
+            <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        }
+      >
+        <LoginForm />
+      </Suspense>
     </AuthShell>
   );
 }
