@@ -608,7 +608,7 @@ export function ChangePasswordForm() {
               ) : (
                 <>
                   <Lock className="size-3.5" />
-                  {hasPassword ? "Update Password" : "Set Account Password"}
+                  {hasPassword ? "Change Password" : "Set Account Password"}
                 </>
               )}
             </Button>
