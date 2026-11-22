@@ -62,9 +62,11 @@ export function QuestionFilterBar({
       : [];
 
   const handleTagToggle = (tag: string) => {
-    const exists = selectedTags.includes(tag);
+    const exists = selectedTags.some(
+      (t) => t.toLowerCase() === tag.toLowerCase(),
+    );
     const updated = exists
-      ? selectedTags.filter((t) => t !== tag)
+      ? selectedTags.filter((t) => t.toLowerCase() !== tag.toLowerCase())
       : [...selectedTags, tag];
 
     onChange({ tags: updated.length ? updated : undefined, page: 1 });
@@ -225,7 +227,9 @@ export function QuestionFilterBar({
           Tags:
         </span>
         {POPULAR_TAGS.map((tag) => {
-          const isSelected = selectedTags.includes(tag);
+          const isSelected = selectedTags.some(
+            (t) => t.toLowerCase() === tag.toLowerCase(),
+          );
           return (
             <button
               key={tag}
