@@ -229,11 +229,11 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
       <div>
         <div
           className={cn(
-            "flex h-16 items-center px-4 border-b border-border/60 transition-all",
-            isCollapsed ? "justify-center" : "justify-between",
+            "flex h-16 items-center border-b border-border/60 transition-all",
+            isCollapsed ? "justify-center px-2" : "justify-between px-4",
           )}
         >
-          {!isCollapsed && (
+          {!isCollapsed ? (
             <Link
               href={
                 role === "ADMIN" ? "/admin/dashboard" : "/recruiter/dashboard"
@@ -242,7 +242,7 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
             >
               <div
                 className={cn(
-                  "flex size-9 items-center justify-center rounded-xl font-mono text-xs font-bold text-white shadow-md shadow-primary/20",
+                  "flex size-9 shrink-0 items-center justify-center rounded-xl font-mono text-xs font-bold text-white shadow-md shadow-primary/20",
                   role === "ADMIN"
                     ? "bg-gradient-to-tr from-violet-600 to-indigo-500"
                     : "bg-gradient-to-tr from-cyan-600 to-blue-600",
@@ -264,33 +264,34 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
                 </span>
               </div>
             </Link>
-          )}
-
-          {isCollapsed && (
-            <Link
-              href={
-                role === "ADMIN" ? "/admin/dashboard" : "/recruiter/dashboard"
-              }
-              className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-indigo-500 font-mono text-xs font-bold text-white shadow-md shadow-primary/20"
-              title="DevAssess"
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsCollapsed(false)}
+              className={cn(
+                "group relative flex size-9 shrink-0 items-center justify-center rounded-xl font-mono text-xs font-bold text-white shadow-md shadow-primary/20 transition-all hover:scale-105 cursor-pointer",
+                role === "ADMIN"
+                  ? "bg-gradient-to-tr from-violet-600 to-indigo-500"
+                  : "bg-gradient-to-tr from-cyan-600 to-blue-600",
+              )}
+              title="Click to expand sidebar"
             >
-              &lt;/&gt;
-            </Link>
+              <span className="group-hover:hidden">&lt;/&gt;</span>
+              <ChevronRight className="hidden size-4 group-hover:block transition-transform" />
+            </button>
           )}
 
-          {/* Desktop Collapse Trigger */}
-          <button
-            type="button"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden md:flex size-7 items-center justify-center rounded-lg border border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
-            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {isCollapsed ? (
-              <ChevronRight className="size-3.5" />
-            ) : (
+          {/* Desktop Collapse Trigger (Shown when expanded) */}
+          {!isCollapsed && (
+            <button
+              type="button"
+              onClick={() => setIsCollapsed(true)}
+              className="hidden md:flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+              title="Collapse sidebar"
+            >
               <ChevronLeft className="size-3.5" />
-            )}
-          </button>
+            </button>
+          )}
         </div>
 
         {/* Navigation Sections */}
@@ -481,10 +482,24 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
       {/* Desktop Persistent Sidebar */}
       <aside
         className={cn(
-          "hidden md:block sticky top-0 h-screen shrink-0 border-r border-border/60 bg-card/40 backdrop-blur-md transition-all duration-300 z-30",
+          "hidden md:block sticky top-0 h-screen shrink-0 border-r border-border/60 bg-card/40 backdrop-blur-md transition-all duration-300 z-30 relative",
           isCollapsed ? "w-18" : "w-64",
         )}
       >
+        {/* Floating Edge Toggle Button */}
+        <button
+          type="button"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="absolute -right-3 top-5 z-40 hidden md:flex size-6 items-center justify-center rounded-full border border-border/80 bg-background shadow-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="size-3" />
+          ) : (
+            <ChevronLeft className="size-3" />
+          )}
+        </button>
+
         {navContent}
       </aside>
     </>
