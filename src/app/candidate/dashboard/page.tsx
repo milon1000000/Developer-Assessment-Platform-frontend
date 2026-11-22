@@ -28,6 +28,7 @@ import {
   Sparkles,
   BookOpen,
   ShieldCheck,
+  Settings,
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -228,6 +229,16 @@ export default function CandidateDashboardPage() {
                   <Globe className="size-4" />
                 </a>
               )}
+              <Link href="/candidate/settings">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 px-3 text-xs font-semibold shadow-xs"
+                >
+                  <Settings className="size-3.5" />
+                  <span>Edit Profile</span>
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

@@ -139,3 +139,35 @@ export const changePasswordSchema = z
   });
 
 export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
+
+// 8. Update Profile Schema
+export const updateProfileSchema = z.object({
+  name: z
+    .string()
+    .min(2, "Full Name must be at least 2 characters")
+    .max(50, "Full Name cannot exceed 50 characters"),
+  phone: z.string().optional(),
+  experienceYears: z.coerce
+    .number()
+    .min(0, "Experience cannot be negative")
+    .max(50, "Experience exceeds maximum limit")
+    .optional(),
+  skills: z.array(z.string()).optional(),
+  githubUrl: z
+    .string()
+    .url("Please enter a valid GitHub URL (e.g. https://github.com/username)")
+    .optional()
+    .or(z.literal("")),
+  portfolioUrl: z
+    .string()
+    .url("Please enter a valid portfolio URL (e.g. https://domain.com)")
+    .optional()
+    .or(z.literal("")),
+  resumeUrl: z
+    .string()
+    .url("Please enter a valid resume URL")
+    .optional()
+    .or(z.literal("")),
+});
+
+export type UpdateProfileFormData = z.infer<typeof updateProfileSchema>;
