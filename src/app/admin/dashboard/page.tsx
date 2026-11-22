@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser, useLogout } from "@/app/hooks/auth.hooks";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
@@ -18,6 +19,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+function getInitials(name?: string) {
+  if (!name) return "A";
+  const clean = name.replace(/[^\w\s]/gi, "").trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { data: userData, isLoading } = useCurrentUser();
@@ -29,14 +40,17 @@ export default function AdminDashboardPage() {
       role?: string;
       adminProfile?: {
         name?: string;
+        avatarUrl?: string;
       };
     };
     profile?: {
       name?: string;
+      avatarUrl?: string;
     };
     email?: string;
     adminProfile?: {
       name?: string;
+      avatarUrl?: string;
     };
   } | null;
 
@@ -106,18 +120,30 @@ export default function AdminDashboardPage() {
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <div className="rounded-2xl border border-border/70 bg-gradient-to-r from-card/90 via-card/70 to-card/90 p-6 shadow-xl backdrop-blur-md">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight">
-              Platform Administration
-            </h1>
-            <Badge className="bg-destructive/15 text-destructive border-destructive/25 text-[10px] py-0 px-2 font-semibold">
-              Super Admin
-            </Badge>
+        <div className="rounded-2xl border border-border/70 bg-gradient-to-r from-card/90 via-card/70 to-card/90 p-6 shadow-xl backdrop-blur-md flex items-center gap-4">
+          <Avatar className="size-14 rounded-2xl border border-destructive/25 bg-destructive/10 text-destructive shadow-sm">
+            <AvatarImage
+              src={admin?.avatarUrl || undefined}
+              alt={admin?.name || "Admin"}
+              className="size-14 rounded-2xl object-cover"
+            />
+            <AvatarFallback className="size-14 rounded-2xl bg-destructive/15 text-destructive text-base font-bold uppercase tracking-wider">
+              {getInitials(admin?.name || user?.email || "A")}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold tracking-tight">
+                Platform Administration
+              </h1>
+              <Badge className="bg-destructive/15 text-destructive border-destructive/25 text-[10px] py-0 px-2 font-semibold">
+                Super Admin
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Logged in as {admin?.name || user?.email} ({user?.email})
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Logged in as {admin?.name || user?.email} ({user?.email})
-          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser, useLogout } from "@/app/hooks/auth.hooks";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Card,
   CardContent,
@@ -26,6 +27,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+function getInitials(name?: string) {
+  if (!name) return "R";
+  const clean = name.replace(/[^\w\s]/gi, "").trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
 export default function RecruiterDashboardPage() {
   const router = useRouter();
   const { data: userData, isLoading } = useCurrentUser();
@@ -39,18 +50,21 @@ export default function RecruiterDashboardPage() {
         name?: string;
         companyName?: string;
         designation?: string;
+        avatarUrl?: string;
       };
     };
     profile?: {
       name?: string;
       companyName?: string;
       designation?: string;
+      avatarUrl?: string;
     };
     email?: string;
     recruiterProfile?: {
       name?: string;
       companyName?: string;
       designation?: string;
+      avatarUrl?: string;
     };
   } | null;
 
@@ -122,19 +136,31 @@ export default function RecruiterDashboardPage() {
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div className="rounded-2xl border border-border/70 bg-gradient-to-r from-card/90 via-card/70 to-card/90 p-6 shadow-xl backdrop-blur-md">
           <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight">
-                  {recruiter?.companyName || "Company"} Talent Portal
-                </h1>
-                <Badge className="bg-primary/15 text-primary border-primary/25 text-[10px] py-0 px-2 font-semibold">
-                  Recruiter Verified
-                </Badge>
+            <div className="flex items-center gap-4">
+              <Avatar className="size-14 rounded-2xl border border-primary/25 bg-primary/10 text-primary shadow-sm">
+                <AvatarImage
+                  src={recruiter?.avatarUrl || undefined}
+                  alt={recruiter?.name || "Recruiter"}
+                  className="size-14 rounded-2xl object-cover"
+                />
+                <AvatarFallback className="size-14 rounded-2xl bg-primary/15 text-primary text-base font-bold uppercase tracking-wider">
+                  {getInitials(recruiter?.name || user?.email || "R")}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-bold tracking-tight">
+                    {recruiter?.companyName || "Company"} Talent Portal
+                  </h1>
+                  <Badge className="bg-primary/15 text-primary border-primary/25 text-[10px] py-0 px-2 font-semibold">
+                    Recruiter Verified
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {recruiter?.name} ({user?.email}) •{" "}
+                  {recruiter?.designation || "Hiring Manager"}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {recruiter?.name} ({user?.email}) •{" "}
-                {recruiter?.designation || "Hiring Manager"}
-              </p>
             </div>
             <Button size="sm" className="gap-1.5 text-xs h-9">
               <PlusCircle className="size-3.5" />

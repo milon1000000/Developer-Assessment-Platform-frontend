@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCurrentUser, useLogout } from "@/app/hooks/auth.hooks";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Card,
   CardContent,
@@ -30,6 +31,16 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+
+function getInitials(name?: string) {
+  if (!name) return "D";
+  const clean = name.replace(/[^\w\s]/gi, "").trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
 
 export default function CandidateDashboardPage() {
   const router = useRouter();
@@ -148,22 +159,16 @@ export default function CandidateDashboardPage() {
           <div className="absolute -right-20 -top-20 size-60 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
             <div className="flex items-center gap-4">
-              <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/15 text-primary text-xl font-bold border border-primary/25 shadow-inner">
-                {developer?.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={developer.avatarUrl}
-                    alt={developer.name || "Developer"}
-                    className="size-14 rounded-2xl object-cover"
-                  />
-                ) : (
-                  (
-                    developer?.name?.[0] ||
-                    user?.email?.[0] ||
-                    "D"
-                  ).toUpperCase()
-                )}
-              </div>
+              <Avatar className="size-14 rounded-2xl border border-primary/25 bg-primary/10 text-primary shadow-sm">
+                <AvatarImage
+                  src={developer?.avatarUrl || undefined}
+                  alt={developer?.name || "Developer"}
+                  className="size-14 rounded-2xl object-cover"
+                />
+                <AvatarFallback className="size-14 rounded-2xl bg-primary/15 text-primary text-base font-bold uppercase tracking-wider">
+                  {getInitials(developer?.name || user?.email || "D")}
+                </AvatarFallback>
+              </Avatar>
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-xl font-bold tracking-tight">
