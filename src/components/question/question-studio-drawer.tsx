@@ -171,13 +171,48 @@ export function QuestionStudioDrawer({
 
   const [errors, setErrors] = React.useState<{ [key: string]: string }>({});
 
-  // Sync state when questionToEdit changes
+  // Reset all form fields to blank initial state
+  const resetForm = React.useCallback(() => {
+    setType("CODING");
+    setDifficulty("EASY");
+    setTitle("");
+    setTags([]);
+    setTagInput("");
+    setProblemStatement("");
+    setConstraints("");
+    setStarterCodes({
+      javascript: getLanguageInfo("javascript").template,
+    });
+    setActiveLang("javascript");
+    setNewLangInput("");
+    setTestCases([
+      {
+        input: "",
+        output: "",
+        isHidden: false,
+        explanation: "",
+      },
+    ]);
+    setMcqOptions([
+      { id: "A", text: "" },
+      { id: "B", text: "" },
+      { id: "C", text: "" },
+      { id: "D", text: "" },
+    ]);
+    setCorrectOption("A");
+    setErrors({});
+  }, []);
+
+  // Sync state when questionToEdit or isOpen changes
   React.useEffect(() => {
+    if (!isOpen) return;
+
     if (questionToEdit) {
       setType(questionToEdit.type || "CODING");
       setDifficulty(questionToEdit.difficulty || "EASY");
       setTitle(questionToEdit.title || "");
       setTags(questionToEdit.tags || []);
+      setTagInput("");
       setProblemStatement(questionToEdit.problemStatement || "");
       setConstraints(questionToEdit.constraints || "");
 
@@ -198,6 +233,7 @@ export function QuestionStudioDrawer({
 
       const langs = Object.keys(initialStarter);
       setActiveLang(langs.length > 0 ? langs[0] : "");
+      setNewLangInput("");
 
       const normalizedTc = normalizeTestCases(questionToEdit.testCases);
       setTestCases(
@@ -205,11 +241,9 @@ export function QuestionStudioDrawer({
           ? normalizedTc
           : [
               {
-                input: "nums = [2, 7, 11, 15], target = 9",
-                output: "[0, 1]",
+                input: "",
+                output: "",
                 isHidden: false,
-                explanation:
-                  "Because nums[0] + nums[1] == 9, we return [0, 1].",
               },
             ],
       );
@@ -227,37 +261,11 @@ export function QuestionStudioDrawer({
       );
 
       setCorrectOption(questionToEdit.correctOption || "A");
+      setErrors({});
     } else {
-      // Reset form
-      setType("CODING");
-      setDifficulty("EASY");
-      setTitle("");
-      setTags([]);
-      setProblemStatement("");
-      setConstraints("");
-      setStarterCodes({
-        javascript: getLanguageInfo("javascript").template,
-      });
-      setActiveLang("javascript");
-      setNewLangInput("");
-      setTestCases([
-        {
-          input: "nums = [2, 7, 11, 15], target = 9",
-          output: "[0, 1]",
-          isHidden: false,
-          explanation: "Because nums[0] + nums[1] == 9, we return [0, 1].",
-        },
-      ]);
-      setMcqOptions([
-        { id: "A", text: "" },
-        { id: "B", text: "" },
-        { id: "C", text: "" },
-        { id: "D", text: "" },
-      ]);
-      setCorrectOption("A");
+      resetForm();
     }
-    setErrors({});
-  }, [questionToEdit]);
+  }, [questionToEdit, isOpen, resetForm]);
 
   if (!isOpen) return null;
 
@@ -467,6 +475,7 @@ export function QuestionStudioDrawer({
         toast.success("Question Created!", {
           description: `"${title}" has been added to the Global Question Bank.`,
         });
+        resetForm();
       }
       onClose();
     } catch (err: unknown) {
@@ -488,15 +497,22 @@ export function QuestionStudioDrawer({
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
+  const handleClose = () => {
+    if (!isEditMode) {
+      resetForm();
+    }
+    onClose();
+  };
+
   return (
     <div
       role="button"
       tabIndex={0}
       aria-label="Close studio drawer"
       className="fixed inset-0 z-50 flex justify-end bg-background/80 backdrop-blur-sm"
-      onClick={onClose}
+      onClick={handleClose}
       onKeyDown={(e) => {
-        if (e.key === "Escape" || e.key === "Enter") onClose();
+        if (e.key === "Escape" || e.key === "Enter") handleClose();
       }}
     >
       <div
@@ -526,7 +542,7 @@ export function QuestionStudioDrawer({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
           >
             <X className="size-5" />
@@ -1097,34 +1113,46 @@ export function QuestionStudioDrawer({
           )}
 
           {/* Submit Actions */}
-          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border/70">
+          <div className="flex items-center justify-between pt-4 border-t border-border/70">
             <Button
               type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isPending}
+              variant="ghost"
+              size="sm"
+              onClick={resetForm}
+              className="text-xs text-muted-foreground hover:text-foreground gap-1.5 cursor-pointer"
             >
-              Cancel
+              <RotateCcw className="size-3.5" />
+              Reset Form
             </Button>
-            <Button
-              type="submit"
-              disabled={isPending}
-              className="gap-2 font-semibold bg-primary text-white cursor-pointer"
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <Check className="size-4" />
-                  <span>
-                    {isEditMode ? "Update Question" : "Create Question"}
-                  </span>
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-2.5">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="gap-2 font-semibold bg-primary text-white cursor-pointer"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="size-4" />
+                    <span>
+                      {isEditMode ? "Update Question" : "Create Question"}
+                    </span>
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       </div>
