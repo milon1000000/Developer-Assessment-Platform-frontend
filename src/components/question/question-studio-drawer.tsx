@@ -136,7 +136,7 @@ export function QuestionStudioDrawer({
   const [difficulty, setDifficulty] =
     React.useState<QuestionDifficulty>("EASY");
   const [title, setTitle] = React.useState("");
-  const [tags, setTags] = React.useState<string[]>(["Algorithms"]);
+  const [tags, setTags] = React.useState<string[]>([]);
   const [tagInput, setTagInput] = React.useState("");
 
   const [problemStatement, setProblemStatement] = React.useState("");
@@ -232,7 +232,7 @@ export function QuestionStudioDrawer({
       setType("CODING");
       setDifficulty("EASY");
       setTitle("");
-      setTags(["Algorithms"]);
+      setTags([]);
       setProblemStatement("");
       setConstraints("");
       setStarterCodes({
@@ -261,13 +261,25 @@ export function QuestionStudioDrawer({
 
   if (!isOpen) return null;
 
-  // Add Tag
-  const handleAddTag = () => {
-    const clean = tagInput.trim();
-    if (clean && !tags.some((t) => t.toLowerCase() === clean.toLowerCase())) {
-      setTags([...tags, clean]);
-      setTagInput("");
+  // Add Tag (Splits comma/semicolon separated values into individual tags)
+  const handleAddTag = (rawInput?: unknown) => {
+    const raw = (typeof rawInput === "string" ? rawInput : tagInput).trim();
+    if (!raw) return;
+
+    const parts = raw
+      .split(/[,;]+/)
+      .map((t) => t.trim().replace(/^#+/, ""))
+      .filter((t) => t.length > 0);
+
+    const updated = [...tags];
+    for (const part of parts) {
+      if (!updated.some((t) => t.toLowerCase() === part.toLowerCase())) {
+        updated.push(part);
+      }
     }
+
+    setTags(updated);
+    setTagInput("");
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
@@ -390,11 +402,27 @@ export function QuestionStudioDrawer({
       }
     });
 
+    // Sanitize tags: ensure every tag is an individual trimmed string without commas or hashes
+    const cleanedTags: string[] = [];
+    tags.forEach((tag) => {
+      tag
+        .split(/[,;]+/)
+        .map((t) => t.trim().replace(/^#+/, ""))
+        .filter((t) => t.length > 0)
+        .forEach((cleanTag) => {
+          if (
+            !cleanedTags.some((c) => c.toLowerCase() === cleanTag.toLowerCase())
+          ) {
+            cleanedTags.push(cleanTag);
+          }
+        });
+    });
+
     const payload: CreateGlobalQuestionPayload = {
       title: title.trim(),
       type,
       difficulty,
-      tags,
+      tags: cleanedTags,
       problemStatement: problemStatement.trim(),
       constraints: constraints?.trim() || undefined,
       starterCode: type === "CODING" ? cleanedStarterCode : undefined,
@@ -611,9 +639,19 @@ export function QuestionStudioDrawer({
             <Label>Skill & Domain Tags</Label>
             <div className="flex gap-2">
               <Input
-                placeholder="Add tag (e.g. React, Array) and press Enter"
+                placeholder="Add tags (e.g. Array, Hash Table) and press Enter"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
+                onPaste={(e) => {
+                  const pasted = e.clipboardData.getData("text");
+                  if (
+                    pasted &&
+                    (pasted.includes(",") || pasted.includes(";"))
+                  ) {
+                    e.preventDefault();
+                    handleAddTag(pasted);
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -625,7 +663,7 @@ export function QuestionStudioDrawer({
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleAddTag}
+                onClick={() => handleAddTag()}
                 className="shrink-0 text-xs gap-1"
               >
                 <Plus className="size-3.5" />
