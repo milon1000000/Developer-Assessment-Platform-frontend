@@ -1,14 +1,16 @@
 import { z } from "zod";
 
 export const testCaseSchema = z.object({
-  input: z.string().min(1, "Input is required"),
-  output: z.string().min(1, "Output is required"),
+  id: z.string().optional(),
+  input: z.string().min(1, "Test case input is required"),
+  output: z.string().min(1, "Test case output is required"),
+  expectedOutput: z.any().optional(),
   isHidden: z.boolean().optional().default(false),
   explanation: z.string().optional(),
 });
 
 export const mcqOptionSchema = z.object({
-  id: z.string().min(1, "Option ID is required"),
+  id: z.string().default("A"),
   text: z.string().min(1, "Option text cannot be empty"),
 });
 
@@ -20,20 +22,12 @@ export const createQuestionSchema = z
     tags: z.array(z.string()).default([]),
     problemStatement: z
       .string()
-      .min(10, "Problem statement must be at least 10 characters long"),
-    constraints: z.string().optional(),
-    starterCode: z
-      .object({
-        javascript: z.string().optional(),
-        python: z.string().optional(),
-        cpp: z.string().optional(),
-        java: z.string().optional(),
-        typescript: z.string().optional(),
-      })
-      .optional(),
+      .min(5, "Problem statement must be at least 5 characters long"),
+    constraints: z.string().optional().nullable(),
+    starterCode: z.any().optional(),
     testCases: z.array(testCaseSchema).optional(),
     mcqOptions: z.array(mcqOptionSchema).optional(),
-    correctOption: z.string().optional(),
+    correctOption: z.string().optional().nullable(),
   })
   .refine(
     (data) => {
@@ -43,7 +37,7 @@ export const createQuestionSchema = z
       return true;
     },
     {
-      message: "At least one test case is required for coding challenges",
+      message: "At least one valid test case is required for coding challenges",
       path: ["testCases"],
     },
   )
@@ -70,20 +64,12 @@ export const updateQuestionSchema = z.object({
   type: z.enum(["CODING", "MCQ"]).optional(),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]).optional(),
   tags: z.array(z.string()).optional(),
-  problemStatement: z.string().min(10).optional(),
-  constraints: z.string().optional(),
-  starterCode: z
-    .object({
-      javascript: z.string().optional(),
-      python: z.string().optional(),
-      cpp: z.string().optional(),
-      java: z.string().optional(),
-      typescript: z.string().optional(),
-    })
-    .optional(),
+  problemStatement: z.string().min(5).optional(),
+  constraints: z.string().optional().nullable(),
+  starterCode: z.any().optional(),
   testCases: z.array(testCaseSchema).optional(),
   mcqOptions: z.array(mcqOptionSchema).optional(),
-  correctOption: z.string().optional(),
+  correctOption: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
 });
 

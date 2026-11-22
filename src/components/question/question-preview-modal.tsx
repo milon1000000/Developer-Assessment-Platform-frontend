@@ -12,7 +12,6 @@ import {
   FileText,
   HelpCircle,
   Lock,
-  Sparkles,
   Terminal,
   X,
 } from "lucide-react";
@@ -23,6 +22,81 @@ interface QuestionPreviewModalProps {
   onClose: () => void;
   onEdit?: (question: IGlobalQuestion) => void;
   isAdmin?: boolean;
+}
+
+function normalizeMcqOptions(
+  options: unknown,
+): Array<{ id: string; text: string }> {
+  if (!options) return [];
+
+  if (Array.isArray(options)) {
+    return options.map((item, index) => {
+      if (typeof item === "string") {
+        return {
+          id: String.fromCharCode(65 + index),
+          text: item,
+        };
+      }
+      if (item && typeof item === "object") {
+        const anyItem = item as {
+          id?: string;
+          text?: string;
+          option?: string;
+          value?: string;
+        };
+        const id = anyItem.id || String.fromCharCode(65 + index);
+        const text =
+          anyItem.text || anyItem.option || anyItem.value || String(item);
+        return { id, text };
+      }
+      return { id: String.fromCharCode(65 + index), text: String(item) };
+    });
+  }
+
+  if (typeof options === "object") {
+    return Object.entries(options as Record<string, unknown>).map(
+      ([key, val]) => ({
+        id: key,
+        text: typeof val === "string" ? val : JSON.stringify(val),
+      }),
+    );
+  }
+
+  return [];
+}
+
+function normalizeTestCases(testCases: unknown): Array<{
+  input: string;
+  output: string;
+  isHidden: boolean;
+  explanation?: string;
+}> {
+  if (!Array.isArray(testCases)) return [];
+  return testCases.map((tc) => {
+    if (typeof tc === "string") {
+      return { input: tc, output: "", isHidden: false };
+    }
+    const anyTc = tc as {
+      input?: unknown;
+      output?: unknown;
+      expectedOutput?: unknown;
+      isHidden?: unknown;
+      explanation?: unknown;
+    };
+    const rawOut = anyTc.output ?? anyTc.expectedOutput;
+    const output =
+      typeof rawOut === "string" ? rawOut : JSON.stringify(rawOut ?? "");
+    const rawIn = anyTc.input;
+    const input =
+      typeof rawIn === "string" ? rawIn : JSON.stringify(rawIn ?? "");
+
+    return {
+      input,
+      output,
+      isHidden: Boolean(anyTc.isHidden),
+      explanation: anyTc.explanation ? String(anyTc.explanation) : undefined,
+    };
+  });
 }
 
 export function QuestionPreviewModal({
@@ -39,6 +113,9 @@ export function QuestionPreviewModal({
     MEDIUM: "border-amber-500/30 bg-amber-500/10 text-amber-400",
     HARD: "border-rose-500/30 bg-rose-500/10 text-rose-400",
   };
+
+  const normalizedOptions = normalizeMcqOptions(question.mcqOptions);
+  const normalizedTestCases = normalizeTestCases(question.testCases);
 
   return (
     <div
@@ -153,31 +230,30 @@ export function QuestionPreviewModal({
           {question.type === "CODING" && (
             <>
               {/* Starter Code */}
-              {question.starterCode &&
-                Object.keys(question.starterCode).length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                      <Terminal className="size-3.5 text-primary" />
-                      Starter Code Template
-                    </h3>
-                    <div className="rounded-xl border border-border/80 bg-zinc-950 p-4 font-mono text-xs text-zinc-300 overflow-x-auto">
-                      <pre>
-                        {question.starterCode.javascript ||
-                          question.starterCode.python ||
-                          question.starterCode.typescript ||
-                          question.starterCode.cpp ||
-                          "// Starter code not configured"}
-                      </pre>
-                    </div>
+              {question.starterCode && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Terminal className="size-3.5 text-primary" />
+                    Starter Code Template
+                  </h3>
+                  <div className="rounded-xl border border-border/80 bg-zinc-950 p-4 font-mono text-xs text-zinc-300 overflow-x-auto">
+                    <pre>
+                      {question.starterCode.javascript ||
+                        question.starterCode.python ||
+                        question.starterCode.typescript ||
+                        question.starterCode.cpp ||
+                        JSON.stringify(question.starterCode, null, 2)}
+                    </pre>
                   </div>
-                )}
+                </div>
+              )}
 
               {/* Test Cases */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                     <CheckCircle2 className="size-3.5 text-emerald-500" />
-                    Test Cases ({question.testCases?.length || 0})
+                    Test Cases ({normalizedTestCases.length})
                   </h3>
                   <span className="text-[11px] text-muted-foreground">
                     Public samples & hidden evaluation cases
@@ -185,8 +261,8 @@ export function QuestionPreviewModal({
                 </div>
 
                 <div className="space-y-2">
-                  {question.testCases && question.testCases.length > 0 ? (
-                    question.testCases.map((tc, index) => (
+                  {normalizedTestCases.length > 0 ? (
+                    normalizedTestCases.map((tc, index) => (
                       <div
                         key={index}
                         className="rounded-xl border border-border/70 bg-background/70 p-3.5 space-y-2"
@@ -261,16 +337,21 @@ export function QuestionPreviewModal({
                 MCQ Options
               </h3>
               <div className="space-y-2">
-                {question.mcqOptions && question.mcqOptions.length > 0 ? (
-                  question.mcqOptions.map((opt) => {
-                    const isCorrect =
+                {normalizedOptions.length > 0 ? (
+                  normalizedOptions.map((opt, index) => {
+                    const isCorrect = Boolean(
                       question.correctOption &&
-                      question.correctOption.toLowerCase() ===
-                        opt.id.toLowerCase();
+                        (String(question.correctOption).trim().toLowerCase() ===
+                          String(opt.id).trim().toLowerCase() ||
+                          String(question.correctOption)
+                            .trim()
+                            .toLowerCase() ===
+                            String(opt.text).trim().toLowerCase()),
+                    );
 
                     return (
                       <div
-                        key={opt.id}
+                        key={`preview-opt-${opt.id}-${index}`}
                         className={`flex items-center justify-between rounded-xl border p-3 text-xs ${
                           isCorrect
                             ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400 font-semibold"
@@ -285,7 +366,7 @@ export function QuestionPreviewModal({
                                 : "bg-muted text-muted-foreground"
                             }`}
                           >
-                            {opt.id.toUpperCase()}
+                            {String(opt.id).toUpperCase()}
                           </span>
                           <span>{opt.text}</span>
                         </div>

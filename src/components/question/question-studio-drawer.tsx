@@ -32,7 +32,6 @@ import {
   Lock,
   Plus,
   Sparkles,
-  Terminal,
   Trash2,
   X,
 } from "lucide-react";
@@ -41,6 +40,81 @@ interface QuestionStudioDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   questionToEdit?: IGlobalQuestion | null;
+}
+
+function normalizeMcqOptions(
+  options: unknown,
+): Array<{ id: string; text: string }> {
+  if (!options) return [];
+
+  if (Array.isArray(options)) {
+    return options.map((item, index) => {
+      if (typeof item === "string") {
+        return {
+          id: String.fromCharCode(65 + index),
+          text: item,
+        };
+      }
+      if (item && typeof item === "object") {
+        const anyItem = item as {
+          id?: string;
+          text?: string;
+          option?: string;
+          value?: string;
+        };
+        const id = anyItem.id || String.fromCharCode(65 + index);
+        const text =
+          anyItem.text || anyItem.option || anyItem.value || String(item);
+        return { id, text };
+      }
+      return { id: String.fromCharCode(65 + index), text: String(item) };
+    });
+  }
+
+  if (typeof options === "object") {
+    return Object.entries(options as Record<string, unknown>).map(
+      ([key, val]) => ({
+        id: key,
+        text: typeof val === "string" ? val : JSON.stringify(val),
+      }),
+    );
+  }
+
+  return [];
+}
+
+function normalizeTestCases(testCases: unknown): Array<{
+  input: string;
+  output: string;
+  isHidden: boolean;
+  explanation?: string;
+}> {
+  if (!Array.isArray(testCases)) return [];
+  return testCases.map((tc) => {
+    if (typeof tc === "string") {
+      return { input: tc, output: "", isHidden: false };
+    }
+    const anyTc = tc as {
+      input?: unknown;
+      output?: unknown;
+      expectedOutput?: unknown;
+      isHidden?: unknown;
+      explanation?: unknown;
+    };
+    const rawOut = anyTc.output ?? anyTc.expectedOutput;
+    const output =
+      typeof rawOut === "string" ? rawOut : JSON.stringify(rawOut ?? "");
+    const rawIn = anyTc.input;
+    const input =
+      typeof rawIn === "string" ? rawIn : JSON.stringify(rawIn ?? "");
+
+    return {
+      input,
+      output,
+      isHidden: Boolean(anyTc.isHidden),
+      explanation: anyTc.explanation ? String(anyTc.explanation) : undefined,
+    };
+  });
 }
 
 export function QuestionStudioDrawer({
@@ -54,80 +128,92 @@ export function QuestionStudioDrawer({
   const updateMutation = useUpdateGlobalQuestion();
 
   // Form State
-  const [type, setType] = React.useState<QuestionType>(
-    questionToEdit?.type || "CODING",
-  );
-  const [difficulty, setDifficulty] = React.useState<QuestionDifficulty>(
-    questionToEdit?.difficulty || "EASY",
-  );
-  const [title, setTitle] = React.useState(questionToEdit?.title || "");
-  const [tags, setTags] = React.useState<string[]>(
-    questionToEdit?.tags || ["Algorithms"],
-  );
+  const [type, setType] = React.useState<QuestionType>("CODING");
+  const [difficulty, setDifficulty] =
+    React.useState<QuestionDifficulty>("EASY");
+  const [title, setTitle] = React.useState("");
+  const [tags, setTags] = React.useState<string[]>(["Algorithms"]);
   const [tagInput, setTagInput] = React.useState("");
 
-  const [problemStatement, setProblemStatement] = React.useState(
-    questionToEdit?.problemStatement || "",
-  );
-  const [constraints, setConstraints] = React.useState(
-    questionToEdit?.constraints || "",
-  );
+  const [problemStatement, setProblemStatement] = React.useState("");
+  const [constraints, setConstraints] = React.useState("");
 
   // Coding Specific
   const [starterCodeJs, setStarterCodeJs] = React.useState(
-    questionToEdit?.starterCode?.javascript ||
-      "function solution(args) {\n  // Write your code here\n  return null;\n}",
+    "function solution(args) {\n  // Write your code here\n  return null;\n}",
   );
 
-  const [testCases, setTestCases] = React.useState<TestCase[]>(
-    questionToEdit?.testCases && questionToEdit.testCases.length > 0
-      ? questionToEdit.testCases
-      : [
-          {
-            input: "nums = [2, 7, 11, 15], target = 9",
-            output: "[0, 1]",
-            isHidden: false,
-            explanation: "Because nums[0] + nums[1] == 9, we return [0, 1].",
-          },
-        ],
-  );
+  const [testCases, setTestCases] = React.useState<TestCase[]>([
+    {
+      input: "nums = [2, 7, 11, 15], target = 9",
+      output: "[0, 1]",
+      isHidden: false,
+      explanation: "Because nums[0] + nums[1] == 9, we return [0, 1].",
+    },
+  ]);
 
   // MCQ Specific
-  const [mcqOptions, setMcqOptions] = React.useState<McqOption[]>(
-    questionToEdit?.mcqOptions && questionToEdit.mcqOptions.length > 0
-      ? questionToEdit.mcqOptions
-      : [
-          { id: "A", text: "" },
-          { id: "B", text: "" },
-          { id: "C", text: "" },
-          { id: "D", text: "" },
-        ],
-  );
-  const [correctOption, setCorrectOption] = React.useState(
-    questionToEdit?.correctOption || "A",
-  );
+  const [mcqOptions, setMcqOptions] = React.useState<McqOption[]>([
+    { id: "A", text: "" },
+    { id: "B", text: "" },
+    { id: "C", text: "" },
+    { id: "D", text: "" },
+  ]);
+  const [correctOption, setCorrectOption] = React.useState("A");
 
   const [errors, setErrors] = React.useState<{ [key: string]: string }>({});
 
   // Sync state when questionToEdit changes
   React.useEffect(() => {
     if (questionToEdit) {
-      setType(questionToEdit.type);
-      setDifficulty(questionToEdit.difficulty);
-      setTitle(questionToEdit.title);
+      setType(questionToEdit.type || "CODING");
+      setDifficulty(questionToEdit.difficulty || "EASY");
+      setTitle(questionToEdit.title || "");
       setTags(questionToEdit.tags || []);
-      setProblemStatement(questionToEdit.problemStatement);
+      setProblemStatement(questionToEdit.problemStatement || "");
       setConstraints(questionToEdit.constraints || "");
-      setStarterCodeJs(
-        questionToEdit.starterCode?.javascript ||
+
+      const starter = questionToEdit.starterCode;
+      if (starter && typeof starter === "object") {
+        setStarterCodeJs(
+          starter.javascript ||
+            starter.typescript ||
+            starter.python ||
+            JSON.stringify(starter, null, 2),
+        );
+      } else {
+        setStarterCodeJs(
           "function solution(args) {\n  // Write your code here\n  return null;\n}",
+        );
+      }
+
+      const normalizedTc = normalizeTestCases(questionToEdit.testCases);
+      setTestCases(
+        normalizedTc.length > 0
+          ? normalizedTc
+          : [
+              {
+                input: "nums = [2, 7, 11, 15], target = 9",
+                output: "[0, 1]",
+                isHidden: false,
+                explanation:
+                  "Because nums[0] + nums[1] == 9, we return [0, 1].",
+              },
+            ],
       );
-      if (questionToEdit.testCases && questionToEdit.testCases.length > 0) {
-        setTestCases(questionToEdit.testCases);
-      }
-      if (questionToEdit.mcqOptions && questionToEdit.mcqOptions.length > 0) {
-        setMcqOptions(questionToEdit.mcqOptions);
-      }
+
+      const normalizedOpts = normalizeMcqOptions(questionToEdit.mcqOptions);
+      setMcqOptions(
+        normalizedOpts.length > 0
+          ? normalizedOpts
+          : [
+              { id: "A", text: "" },
+              { id: "B", text: "" },
+              { id: "C", text: "" },
+              { id: "D", text: "" },
+            ],
+      );
+
       setCorrectOption(questionToEdit.correctOption || "A");
     } else {
       // Reset form
@@ -164,7 +250,7 @@ export function QuestionStudioDrawer({
   // Add Tag
   const handleAddTag = () => {
     const clean = tagInput.trim();
-    if (clean && !tags.includes(clean)) {
+    if (clean && !tags.some((t) => t.toLowerCase() === clean.toLowerCase())) {
       setTags([...tags, clean]);
       setTagInput("");
     }
@@ -216,17 +302,38 @@ export function QuestionStudioDrawer({
     e.preventDefault();
     setErrors({});
 
+    // Filter test cases: if user added blank rows at the end, clean them up
+    const cleanedTc =
+      type === "CODING"
+        ? testCases
+            .map((tc) => ({
+              ...tc,
+              input: String(tc.input ?? "").trim(),
+              output: String(tc.output ?? "").trim(),
+            }))
+            .filter((tc, idx) => idx === 0 || tc.input || tc.output)
+        : undefined;
+
+    // Filter mcq options
+    const cleanedMcq =
+      type === "MCQ"
+        ? mcqOptions.map((opt) => ({
+            ...opt,
+            text: String(opt.text ?? "").trim(),
+          }))
+        : undefined;
+
     const payload: CreateGlobalQuestionPayload = {
-      title,
+      title: title.trim(),
       type,
       difficulty,
       tags,
-      problemStatement,
-      constraints: constraints || undefined,
+      problemStatement: problemStatement.trim(),
+      constraints: constraints?.trim() || undefined,
       starterCode:
         type === "CODING" ? { javascript: starterCodeJs } : undefined,
-      testCases: type === "CODING" ? testCases : undefined,
-      mcqOptions: type === "MCQ" ? mcqOptions : undefined,
+      testCases: cleanedTc,
+      mcqOptions: cleanedMcq,
       correctOption: type === "MCQ" ? correctOption : undefined,
     };
 
@@ -243,8 +350,11 @@ export function QuestionStudioDrawer({
         }
       }
       setErrors(fieldErrors);
-      toast.error("Validation Failed", {
-        description: "Please fix the form errors before submitting.",
+      const firstError =
+        validation.error.issues[0]?.message ||
+        "Please fix the form errors before submitting.";
+      toast.error("Validation Error", {
+        description: firstError,
       });
       return;
     }
@@ -553,7 +663,7 @@ export function QuestionStudioDrawer({
                 </div>
 
                 {errors.testCases && (
-                  <p className="text-[11px] text-destructive">
+                  <p className="text-[11px] text-destructive font-medium">
                     {errors.testCases}
                   </p>
                 )}
@@ -561,7 +671,7 @@ export function QuestionStudioDrawer({
                 <div className="space-y-3">
                   {testCases.map((tc, index) => (
                     <div
-                      key={index}
+                      key={`testcase-row-${index}`}
                       className="rounded-xl border border-border/80 bg-background/60 p-3.5 space-y-3"
                     >
                       <div className="flex items-center justify-between">
@@ -592,7 +702,7 @@ export function QuestionStudioDrawer({
                             <button
                               type="button"
                               onClick={() => handleRemoveTestCase(index)}
-                              className="text-muted-foreground hover:text-destructive p-1"
+                              className="text-muted-foreground hover:text-destructive p-1 cursor-pointer"
                               title="Delete Test Case"
                             >
                               <Trash2 className="size-3.5" />
@@ -604,7 +714,7 @@ export function QuestionStudioDrawer({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <div className="space-y-1">
                           <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                            Input
+                            Input *
                           </span>
                           <Textarea
                             rows={2}
@@ -622,7 +732,7 @@ export function QuestionStudioDrawer({
                         </div>
                         <div className="space-y-1">
                           <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                            Expected Output
+                            Expected Output *
                           </span>
                           <Textarea
                             rows={2}
@@ -657,17 +767,19 @@ export function QuestionStudioDrawer({
               </div>
 
               {errors.correctOption && (
-                <p className="text-[11px] text-destructive">
+                <p className="text-[11px] text-destructive font-medium">
                   {errors.correctOption}
                 </p>
               )}
 
               <div className="space-y-2.5">
-                {mcqOptions.map((opt) => {
-                  const isChecked = correctOption === opt.id;
+                {mcqOptions.map((opt, optIndex) => {
+                  const optionId = opt.id || String.fromCharCode(65 + optIndex);
+                  const isChecked =
+                    correctOption === optionId || correctOption === opt.text;
                   return (
                     <div
-                      key={opt.id}
+                      key={`studio-opt-${optionId}-${optIndex}`}
                       className={`flex items-center gap-3 rounded-xl border p-2.5 transition-all ${
                         isChecked
                           ? "border-emerald-500/50 bg-emerald-500/5 ring-1 ring-emerald-500/30"
@@ -676,21 +788,21 @@ export function QuestionStudioDrawer({
                     >
                       <input
                         type="radio"
-                        id={`option-${opt.id}`}
+                        id={`option-${optionId}`}
                         name="correct-option"
                         checked={isChecked}
-                        onChange={() => setCorrectOption(opt.id)}
+                        onChange={() => setCorrectOption(optionId)}
                         className="size-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                       />
                       <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold font-mono text-muted-foreground">
-                        {opt.id}
+                        {optionId}
                       </span>
                       <Input
                         value={opt.text}
                         onChange={(e) =>
-                          handleOptionChange(opt.id, e.target.value)
+                          handleOptionChange(optionId, e.target.value)
                         }
-                        placeholder={`Option ${opt.id} text...`}
+                        placeholder={`Option ${optionId} text...`}
                         className="flex-1 text-xs h-8.5"
                       />
                     </div>

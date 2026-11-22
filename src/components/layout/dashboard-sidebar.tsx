@@ -209,7 +209,9 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
   const subtitle =
     role === "ADMIN"
       ? "Super Admin"
-      : profile?.companyName || user?.recruiterProfile?.companyName || "Hiring Team";
+      : profile?.companyName ||
+        user?.recruiterProfile?.companyName ||
+        "Hiring Team";
 
   const handleLogout = async () => {
     try {
