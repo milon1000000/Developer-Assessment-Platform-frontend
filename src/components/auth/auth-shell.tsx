@@ -37,7 +37,12 @@ export function AuthShell({
   const { data: currentUserData, isLoading: isUserLoading } = useCurrentUser();
   const logoutMutation = useLogout();
 
-  const isAuthenticated = !isUserLoading && !!currentUserData?.data;
+  const rawUser = currentUserData?.data as {
+    user?: { email?: string };
+    email?: string;
+  } | null;
+  const isAuthenticated =
+    !isUserLoading && !!(rawUser?.user?.email || rawUser?.email);
 
   const handleLogout = async () => {
     try {

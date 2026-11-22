@@ -23,8 +23,25 @@ export default function AdminDashboardPage() {
   const { data: userData, isLoading } = useCurrentUser();
   const logoutMutation = useLogout();
 
-  const user = userData?.data;
-  const admin = user?.adminProfile;
+  const rawData = userData?.data as {
+    user?: {
+      email?: string;
+      role?: string;
+      adminProfile?: {
+        name?: string;
+      };
+    };
+    profile?: {
+      name?: string;
+    };
+    email?: string;
+    adminProfile?: {
+      name?: string;
+    };
+  } | null;
+
+  const user = rawData?.user || rawData;
+  const admin = rawData?.profile || user?.adminProfile;
 
   const handleLogout = async () => {
     try {

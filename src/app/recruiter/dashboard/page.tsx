@@ -31,8 +31,31 @@ export default function RecruiterDashboardPage() {
   const { data: userData, isLoading } = useCurrentUser();
   const logoutMutation = useLogout();
 
-  const user = userData?.data;
-  const recruiter = user?.recruiterProfile;
+  const rawData = userData?.data as {
+    user?: {
+      email?: string;
+      role?: string;
+      recruiterProfile?: {
+        name?: string;
+        companyName?: string;
+        designation?: string;
+      };
+    };
+    profile?: {
+      name?: string;
+      companyName?: string;
+      designation?: string;
+    };
+    email?: string;
+    recruiterProfile?: {
+      name?: string;
+      companyName?: string;
+      designation?: string;
+    };
+  } | null;
+
+  const user = rawData?.user || rawData;
+  const recruiter = rawData?.profile || user?.recruiterProfile;
 
   const handleLogout = async () => {
     try {

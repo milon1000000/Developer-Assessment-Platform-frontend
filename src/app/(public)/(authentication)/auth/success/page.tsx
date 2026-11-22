@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getMe, logout } from "@/api/auth.api";
+import { setAuthToken } from "@/lib/apiClient";
 import {
   Card,
   CardContent,
@@ -43,21 +44,37 @@ function AuthSuccessContent() {
           throw new Error(errorParam);
         }
 
-        // Invalidate current user query to pick up newly set cookies
+        const tokenParam = searchParams.get("accessToken");
+        if (tokenParam) {
+          setAuthToken(tokenParam);
+        }
+
+        // Invalidate current user query to pick up newly set cookies/tokens
         await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
 
         // Retrieve authenticated user data
         const res = await getMe();
-        const user = res?.data;
+        const rawData = res?.data as {
+          user?: { email?: string; role?: string; name?: string };
+          profile?: { name?: string };
+          role?: string;
+          email?: string;
+          name?: string;
+        } | null;
 
-        if (!user) {
+        const currentUser = rawData?.user || rawData;
+        const profile = rawData?.profile;
+        const role = currentUser?.role;
+
+        if (!currentUser || !role) {
           throw new Error("Unable to retrieve user credentials.");
         }
 
         // STRICT VALIDATION: Only DEVELOPER role can sign in via Google
-        if (user.role !== "DEVELOPER") {
+        if (role !== "DEVELOPER") {
           // If non-developer account was somehow reached, log out immediately
           await logout().catch(() => {});
+          setAuthToken(null);
           queryClient.clear();
           throw new Error(
             "Google sign-in is exclusively available for Developers. Please log in with your email and password.",
@@ -65,18 +82,22 @@ function AuthSuccessContent() {
         }
 
         if (isMounted) {
-          const devName = user.developerProfile?.name || user.email;
+          const devName =
+            profile?.name ||
+            currentUser?.name ||
+            currentUser?.email ||
+            "Developer";
           setDeveloperName(devName);
           setStatus("success");
 
           toast.success("Authentication Successful!", {
-            description: `Welcome to DevAssess, ${devName}!`,
+            description: `Welcome back to DevAssess, ${devName}!`,
           });
 
           // Smooth transition to Developer Candidate Dashboard
           setTimeout(() => {
             router.replace("/candidate/dashboard");
-          }, 1200);
+          }, 800);
         }
       } catch (err: unknown) {
         if (isMounted) {

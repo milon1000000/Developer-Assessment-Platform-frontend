@@ -36,8 +36,40 @@ export default function CandidateDashboardPage() {
   const { data: userData, isLoading } = useCurrentUser();
   const logoutMutation = useLogout();
 
-  const user = userData?.data;
-  const developer = user?.developerProfile;
+  const rawData = userData?.data as {
+    user?: {
+      email?: string;
+      role?: string;
+      developerProfile?: {
+        name?: string;
+        avatarUrl?: string;
+        experienceYears?: number;
+        skills?: string[];
+        githubUrl?: string;
+        portfolioUrl?: string;
+      };
+    };
+    profile?: {
+      name?: string;
+      avatarUrl?: string;
+      experienceYears?: number;
+      skills?: string[];
+      githubUrl?: string;
+      portfolioUrl?: string;
+    };
+    email?: string;
+    developerProfile?: {
+      name?: string;
+      avatarUrl?: string;
+      experienceYears?: number;
+      skills?: string[];
+      githubUrl?: string;
+      portfolioUrl?: string;
+    };
+  } | null;
+
+  const user = rawData?.user || rawData;
+  const developer = rawData?.profile || user?.developerProfile;
 
   const handleLogout = async () => {
     try {

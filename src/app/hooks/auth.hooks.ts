@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { setAuthToken } from "@/lib/apiClient";
 import {
   changePassword,
   getMe,
@@ -19,7 +20,10 @@ export function useLogin() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: userLogin,
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data?.data?.accessToken) {
+        setAuthToken(data.data.accessToken);
+      }
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
     },
   });
@@ -69,6 +73,7 @@ export function useLogout() {
   return useMutation({
     mutationFn: logout,
     onSuccess: () => {
+      setAuthToken(null);
       queryClient.clear();
     },
   });
