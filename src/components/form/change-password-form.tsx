@@ -3,14 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { useChangePassword } from "@/app/hooks/auth.hooks";
+import { useChangePassword, useCurrentUser } from "@/app/hooks/auth.hooks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -19,7 +18,9 @@ import { Label } from "@/components/ui/label";
 import {
   changePasswordSchema,
   passwordRegex,
+  setPasswordSchema,
 } from "@/validations/auth.validation";
+import type { IUser } from "@/types/auth.type";
 import {
   AlertCircle,
   Check,
@@ -37,7 +38,14 @@ import {
 } from "lucide-react";
 
 export function ChangePasswordForm() {
+  const { data: userData } = useCurrentUser();
   const changePasswordMutation = useChangePassword();
+
+  const rawData = userData?.data;
+  const currentUser: IUser | undefined =
+    (rawData as { user?: IUser } | undefined)?.user ||
+    (rawData as IUser | undefined);
+  const hasPassword = Boolean(currentUser?.hasPassword);
 
   const [oldPassword, setOldPassword] = React.useState("");
   const [newPassword, setNewPassword] = React.useState("");
@@ -114,6 +122,58 @@ export function ChangePasswordForm() {
     e.preventDefault();
     setErrors({});
 
+    // If user has no password set (e.g. Google user), validate without oldPassword
+    if (!hasPassword) {
+      const validation = setPasswordSchema.safeParse({
+        newPassword,
+        confirmPassword,
+      });
+
+      if (!validation.success) {
+        const fieldErrors: { [key: string]: string } = {};
+        for (const issue of validation.error.issues) {
+          if (issue.path[0]) {
+            fieldErrors[issue.path[0].toString()] = issue.message;
+          }
+        }
+        setErrors(fieldErrors);
+        toast.error("Validation Error", {
+          description: "Please fulfill all password security requirements.",
+        });
+        return;
+      }
+
+      try {
+        const res = await changePasswordMutation.mutateAsync({
+          newPassword: validation.data.newPassword,
+        });
+
+        toast.success("Password Set Successfully!", {
+          description:
+            res?.message ||
+            "You can now sign in with either Google or your email & password.",
+        });
+
+        handleReset();
+      } catch (err: unknown) {
+        const errorResponse = err as {
+          response?: { _data?: { message?: string } };
+          data?: { message?: string };
+          message?: string;
+        };
+        const errorMsg =
+          errorResponse?.response?._data?.message ||
+          errorResponse?.data?.message ||
+          errorResponse?.message ||
+          "Failed to set password. Please try again.";
+
+        toast.error("Password Setup Failed", { description: errorMsg });
+        setErrors({ form: errorMsg });
+      }
+      return;
+    }
+
+    // User already has a password, change password with current password
     const validation = changePasswordSchema.safeParse({
       oldPassword,
       newPassword,
@@ -129,23 +189,23 @@ export function ChangePasswordForm() {
       }
       setErrors(fieldErrors);
       toast.error("Validation Error", {
-        description: "Please fulfill all password security requirements.",
+        description: "Please check your current and new password.",
       });
       return;
     }
 
     try {
-      await changePasswordMutation.mutateAsync({
+      const res = await changePasswordMutation.mutateAsync({
         oldPassword: validation.data.oldPassword,
         newPassword: validation.data.newPassword,
       });
 
       toast.success("Password Updated Successfully!", {
         description:
+          res?.message ||
           "Your account password has been updated. Please remember your new credentials.",
       });
 
-      // Clear the inputs
       handleReset();
     } catch (err: unknown) {
       const errorResponse = err as {
@@ -173,31 +233,61 @@ export function ChangePasswordForm() {
       {/* Card Header */}
       <CardHeader className="space-y-2 pb-5 border-b border-border/50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-violet-500/15 text-violet-400 border border-violet-500/25 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-violet-500/15 text-violet-400 border border-violet-500/25 shadow-sm">
               <Shield className="size-5" />
             </div>
             <div>
               <CardTitle className="text-lg font-bold">
-                Change Account Password
+                {hasPassword
+                  ? "Change Account Password"
+                  : "Set Account Password"}
               </CardTitle>
               <CardDescription className="text-xs">
-                Update your credentials to maintain optimal account integrity
-                and sandbox security
+                {hasPassword
+                  ? "Update your credentials to maintain optimal account integrity and sandbox security"
+                  : "You signed in via Google. Set a direct password to enable email & password sign-in alongside Google."}
               </CardDescription>
             </div>
           </div>
           <Badge
             variant="outline"
-            className="hidden sm:inline-flex border-violet-500/30 text-violet-400 bg-violet-500/10 text-[10px] py-0.5 px-2 font-semibold gap-1"
+            className={
+              hasPassword
+                ? "hidden sm:inline-flex border-violet-500/30 text-violet-400 bg-violet-500/10 text-[10px] py-0.5 px-2 font-semibold gap-1"
+                : "hidden sm:inline-flex border-amber-500/30 text-amber-500 bg-amber-500/10 text-[10px] py-0.5 px-2 font-semibold gap-1"
+            }
           >
-            <ShieldCheck className="size-3 text-violet-400" />
-            Security & Authentication
+            <ShieldCheck className="size-3" />
+            {hasPassword
+              ? "Security & Authentication"
+              : "Google Account Linked"}
           </Badge>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-5 pt-6">
+        {/* Google User Notice Banner if no password is set */}
+        {!hasPassword && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-500 flex items-start gap-3 leading-relaxed">
+            <Sparkles className="size-4 shrink-0 mt-0.5 text-amber-500" />
+            <div>
+              <p className="font-semibold text-foreground">
+                Google Single Sign-on Active
+              </p>
+              <p className="text-muted-foreground mt-0.5">
+                Your account is authenticated via Google (
+                <span className="text-foreground font-mono">
+                  {currentUser?.email}
+                </span>
+                ). You do not currently have a password set. Set a secure
+                password below to enable logging in via both Google and direct
+                email/password credentials.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Global Error Banner */}
         {errors.form && (
           <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive flex items-start gap-2.5">
@@ -209,57 +299,59 @@ export function ChangePasswordForm() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Field 1: Current Password */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="old-password" required>
-                Current Password
-              </Label>
-              <Link
-                href="/forgot-password"
-                className="text-[11px] text-primary hover:underline font-medium"
-              >
-                Forgot your current password?
-              </Link>
+          {/* Field 1: Current Password (ONLY shown if user already has a password) */}
+          {hasPassword && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="old-password" required>
+                  Current Password
+                </Label>
+                <Link
+                  href="/forgot-password"
+                  className="text-[11px] text-primary hover:underline font-medium"
+                >
+                  Forgot your current password?
+                </Link>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+                <Input
+                  id="old-password"
+                  type={showOldPassword ? "text" : "password"}
+                  placeholder="Enter current password"
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  className="pl-9 pr-9"
+                  error={!!errors.oldPassword}
+                  required
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowOldPassword(!showOldPassword)}
+                  className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                >
+                  {showOldPassword ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
+                </button>
+              </div>
+              {errors.oldPassword && (
+                <p className="text-[11px] text-destructive font-medium">
+                  {errors.oldPassword}
+                </p>
+              )}
             </div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-              <Input
-                id="old-password"
-                type={showOldPassword ? "text" : "password"}
-                placeholder="Enter current password"
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                className="pl-9 pr-9"
-                error={!!errors.oldPassword}
-                required
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowOldPassword(!showOldPassword)}
-                className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
-                tabIndex={-1}
-              >
-                {showOldPassword ? (
-                  <EyeOff className="size-4" />
-                ) : (
-                  <Eye className="size-4" />
-                )}
-              </button>
-            </div>
-            {errors.oldPassword && (
-              <p className="text-[11px] text-destructive font-medium">
-                {errors.oldPassword}
-              </p>
-            )}
-          </div>
+          )}
 
           {/* Field 2: New Password */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="new-password" required>
-                New Password
+                {hasPassword ? "New Password" : "Create Account Password"}
               </Label>
               {newPassword.length > 0 && (
                 <span className="text-[11px] font-semibold flex items-center gap-1 font-mono">
@@ -275,7 +367,11 @@ export function ChangePasswordForm() {
               <Input
                 id="new-password"
                 type={showNewPassword ? "text" : "password"}
-                placeholder="Enter secure new password"
+                placeholder={
+                  hasPassword
+                    ? "Enter secure new password"
+                    : "Create a strong password"
+                }
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="pl-9 pr-9"
@@ -427,7 +523,7 @@ export function ChangePasswordForm() {
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="confirm-password" required>
-                Confirm New Password
+                Confirm Password
               </Label>
               {isMatching && (
                 <span className="text-[11px] text-emerald-500 font-semibold flex items-center gap-1">
@@ -441,7 +537,7 @@ export function ChangePasswordForm() {
               <Input
                 id="confirm-password"
                 type={showConfirmPassword ? "text" : "password"}
-                placeholder="Confirm your new password"
+                placeholder="Confirm your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="pl-9 pr-9"
@@ -478,9 +574,9 @@ export function ChangePasswordForm() {
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground flex items-start gap-2.5 leading-relaxed">
             <ShieldAlert className="size-4 shrink-0 text-primary mt-0.5" />
             <span>
-              For your account protection, changing your password will
-              automatically invalidate all other active sessions and access
-              tokens.
+              {hasPassword
+                ? "For your account protection, changing your password will automatically invalidate all other active sessions and access tokens."
+                : "Setting a password adds direct email and password authentication to your account, allowing seamless login with or without Google."}
             </span>
           </div>
 
@@ -507,12 +603,12 @@ export function ChangePasswordForm() {
               {changePasswordMutation.isPending ? (
                 <>
                   <Loader2 className="size-3.5 animate-spin" />
-                  Updating Password...
+                  {hasPassword ? "Updating Password..." : "Setting Password..."}
                 </>
               ) : (
                 <>
                   <Lock className="size-3.5" />
-                  Update Password
+                  {hasPassword ? "Update Password" : "Set Account Password"}
                 </>
               )}
             </Button>

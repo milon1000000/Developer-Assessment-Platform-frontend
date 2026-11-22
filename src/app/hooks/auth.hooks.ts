@@ -103,10 +103,14 @@ export function useResetPassword() {
   });
 }
 
-// Hook: Change Password
+// Hook: Change & Set Password
 export function useChangePassword() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: changePassword,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+    },
   });
 }
 

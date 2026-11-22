@@ -62,7 +62,7 @@ export interface ResetPasswordPayload {
 }
 
 export interface ChangePasswordPayload {
-  oldPassword: string;
+  oldPassword?: string;
   newPassword: string;
 }
 
@@ -102,6 +102,8 @@ export interface IUser {
   email: string;
   role: UserRole;
   status: UserStatus;
+  hasPassword?: boolean;
+  authProvider?: string;
   emailVerified: boolean;
   developerProfile?: IDeveloperProfile | null;
   recruiterProfile?: IRecruiterProfile | null;

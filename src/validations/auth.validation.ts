@@ -126,10 +126,10 @@ export const resetPasswordSchema = z
 
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
-// 7. Change Password
+// 7. Change & Set Password
 export const changePasswordSchema = z
   .object({
-    oldPassword: z.string().min(1, "Current password is required"),
+    oldPassword: z.string().optional(),
     newPassword: passwordValidation,
     confirmPassword: z.string().min(1, "Please confirm your new password"),
   })
@@ -139,6 +139,18 @@ export const changePasswordSchema = z
   });
 
 export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
+
+export const setPasswordSchema = z
+  .object({
+    newPassword: passwordValidation,
+    confirmPassword: z.string().min(1, "Please confirm your new password"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "New passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export type SetPasswordFormData = z.infer<typeof setPasswordSchema>;
 
 // 8. Update Profile Schema
 export const updateProfileSchema = z.object({
