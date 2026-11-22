@@ -31,10 +31,30 @@ import {
   Loader2,
   Lock,
   Plus,
+  RotateCcw,
   Sparkles,
+  Terminal,
   Trash2,
   X,
 } from "lucide-react";
+
+export const SUPPORTED_LANGUAGES = [
+  { id: "javascript", label: "JavaScript", runtime: "Node.js 20" },
+  { id: "typescript", label: "TypeScript", runtime: "TS 5.x" },
+  { id: "python", label: "Python", runtime: "Python 3.12" },
+  { id: "cpp", label: "C++", runtime: "GCC 13" },
+  { id: "java", label: "Java", runtime: "OpenJDK 21" },
+] as const;
+
+export type SupportedLang = (typeof SUPPORTED_LANGUAGES)[number]["id"];
+
+export const DEFAULT_STARTER_CODES: Record<string, string> = {
+  javascript: `function solution(args) {\n  // Write your code here\n  return null;\n}`,
+  typescript: `function solution(args: any): any {\n  // Write your code here\n  return null;\n}`,
+  python: `def solution(args):\n    # Write your code here\n    pass`,
+  cpp: `#include <iostream>\n#include <vector>\n\nusing namespace std;\n\nclass Solution {\npublic:\n    void solution() {\n        // Write your code here\n    }\n};`,
+  java: `import java.util.*;\n\nclass Solution {\n    public Object solution(Object args) {\n        // Write your code here\n        return null;\n    }\n}`,
+};
 
 interface QuestionStudioDrawerProps {
   isOpen: boolean;
@@ -139,9 +159,11 @@ export function QuestionStudioDrawer({
   const [constraints, setConstraints] = React.useState("");
 
   // Coding Specific
-  const [starterCodeJs, setStarterCodeJs] = React.useState(
-    "function solution(args) {\n  // Write your code here\n  return null;\n}",
-  );
+  const [activeLang, setActiveLang] =
+    React.useState<SupportedLang>("javascript");
+  const [starterCodes, setStarterCodes] = React.useState<
+    Record<string, string>
+  >(DEFAULT_STARTER_CODES);
 
   const [testCases, setTestCases] = React.useState<TestCase[]>([
     {
@@ -173,19 +195,35 @@ export function QuestionStudioDrawer({
       setProblemStatement(questionToEdit.problemStatement || "");
       setConstraints(questionToEdit.constraints || "");
 
-      const starter = questionToEdit.starterCode;
-      if (starter && typeof starter === "object") {
-        setStarterCodeJs(
-          starter.javascript ||
-            starter.typescript ||
-            starter.python ||
-            JSON.stringify(starter, null, 2),
+      const rawStarter = questionToEdit.starterCode as unknown;
+      const initialStarter: Record<string, string> = {
+        ...DEFAULT_STARTER_CODES,
+      };
+      if (rawStarter && typeof rawStarter === "object") {
+        Object.entries(rawStarter as Record<string, unknown>).forEach(
+          ([key, val]) => {
+            if (typeof val === "string") {
+              initialStarter[key.toLowerCase()] = val;
+            }
+          },
         );
-      } else {
-        setStarterCodeJs(
-          "function solution(args) {\n  // Write your code here\n  return null;\n}",
-        );
+      } else if (typeof rawStarter === "string" && rawStarter.trim()) {
+        initialStarter.javascript = rawStarter;
       }
+      setStarterCodes(initialStarter);
+
+      // Determine active language: pick first configured or default to javascript
+      const configuredLang =
+        SUPPORTED_LANGUAGES.find(
+          (l) =>
+            rawStarter &&
+            typeof rawStarter === "object" &&
+            Boolean(
+              (rawStarter as Record<string, unknown>)[l.id] &&
+                String((rawStarter as Record<string, unknown>)[l.id]).trim(),
+            ),
+        )?.id || "javascript";
+      setActiveLang(configuredLang);
 
       const normalizedTc = normalizeTestCases(questionToEdit.testCases);
       setTestCases(
@@ -223,9 +261,8 @@ export function QuestionStudioDrawer({
       setTags(["Algorithms"]);
       setProblemStatement("");
       setConstraints("");
-      setStarterCodeJs(
-        "function solution(args) {\n  // Write your code here\n  return null;\n}",
-      );
+      setStarterCodes(DEFAULT_STARTER_CODES);
+      setActiveLang("javascript");
       setTestCases([
         {
           input: "nums = [2, 7, 11, 15], target = 9",
@@ -323,6 +360,14 @@ export function QuestionStudioDrawer({
           }))
         : undefined;
 
+    // Filter starter codes: only keep non-empty entries
+    const cleanedStarterCode: Record<string, string> = {};
+    Object.entries(starterCodes).forEach(([lang, code]) => {
+      if (typeof code === "string" && code.trim()) {
+        cleanedStarterCode[lang] = code;
+      }
+    });
+
     const payload: CreateGlobalQuestionPayload = {
       title: title.trim(),
       type,
@@ -330,8 +375,7 @@ export function QuestionStudioDrawer({
       tags,
       problemStatement: problemStatement.trim(),
       constraints: constraints?.trim() || undefined,
-      starterCode:
-        type === "CODING" ? { javascript: starterCodeJs } : undefined,
+      starterCode: type === "CODING" ? cleanedStarterCode : undefined,
       testCases: cleanedTc,
       mcqOptions: cleanedMcq,
       correctOption: type === "MCQ" ? correctOption : undefined,
@@ -625,20 +669,116 @@ export function QuestionStudioDrawer({
           {/* CONDITIONAL: CODING MODE */}
           {type === "CODING" && (
             <div className="space-y-5 pt-3 border-t border-border/70">
-              {/* Starter Code */}
-              <div className="space-y-1.5">
+              {/* Multi-Language Starter Code Section */}
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <Label>JavaScript Starter Code</Label>
-                  <span className="text-[11px] text-muted-foreground font-mono">
-                    Node.js runtime
-                  </span>
+                  <div>
+                    <Label className="flex items-center gap-1.5 font-semibold text-xs sm:text-sm">
+                      <Terminal className="size-3.5 text-primary" />
+                      Starter Code Templates
+                    </Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Configure boilerplate code across candidate-supported
+                      languages
+                    </p>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] font-mono text-muted-foreground border-border/70 bg-muted/40"
+                  >
+                    {
+                      SUPPORTED_LANGUAGES.find((l) => l.id === activeLang)
+                        ?.runtime
+                    }
+                  </Badge>
                 </div>
-                <Textarea
-                  rows={4}
-                  value={starterCodeJs}
-                  onChange={(e) => setStarterCodeJs(e.target.value)}
-                  className="font-mono text-xs bg-zinc-950 text-zinc-200"
-                />
+
+                {/* Language Switcher Tabs */}
+                <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-muted/40 border border-border/70">
+                  {SUPPORTED_LANGUAGES.map((lang) => {
+                    const isActive = activeLang === lang.id;
+                    const isConfigured = Boolean(starterCodes[lang.id]?.trim());
+                    const isCustomized =
+                      isConfigured &&
+                      starterCodes[lang.id] !== DEFAULT_STARTER_CODES[lang.id];
+
+                    return (
+                      <button
+                        key={lang.id}
+                        type="button"
+                        onClick={() => setActiveLang(lang.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          isActive
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground hover:bg-background/80"
+                        }`}
+                      >
+                        <span>{lang.label}</span>
+                        {isConfigured && (
+                          <span
+                            className={`size-1.5 rounded-full ${
+                              isActive
+                                ? "bg-primary-foreground"
+                                : isCustomized
+                                  ? "bg-emerald-500"
+                                  : "bg-muted-foreground/50"
+                            }`}
+                            title={
+                              isCustomized
+                                ? "Custom starter code configured"
+                                : "Default boilerplate active"
+                            }
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Editor Container */}
+                <div className="rounded-xl border border-border/80 bg-zinc-950 overflow-hidden shadow-inner focus-within:ring-1 focus-within:ring-primary/50">
+                  <div className="flex items-center justify-between px-3.5 py-1.5 border-b border-zinc-800 bg-zinc-900/80 text-[11px] font-mono text-zinc-400">
+                    <span className="flex items-center gap-1.5">
+                      <Code2 className="size-3 text-primary" />
+                      {
+                        SUPPORTED_LANGUAGES.find((l) => l.id === activeLang)
+                          ?.label
+                      }{" "}
+                      Boilerplate
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStarterCodes((prev) => ({
+                          ...prev,
+                          [activeLang]: DEFAULT_STARTER_CODES[activeLang] || "",
+                        }));
+                        toast.info(
+                          `Reset ${SUPPORTED_LANGUAGES.find((l) => l.id === activeLang)?.label} to default boilerplate`,
+                        );
+                      }}
+                      className="flex items-center gap-1 text-[10px] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="size-2.5" />
+                      Reset to Default
+                    </button>
+                  </div>
+                  <Textarea
+                    rows={6}
+                    value={starterCodes[activeLang] || ""}
+                    onChange={(e) =>
+                      setStarterCodes((prev) => ({
+                        ...prev,
+                        [activeLang]: e.target.value,
+                      }))
+                    }
+                    placeholder={`// Write starter code template for ${
+                      SUPPORTED_LANGUAGES.find((l) => l.id === activeLang)
+                        ?.label
+                    }...`}
+                    className="font-mono text-xs bg-transparent border-0 text-zinc-200 focus-visible:ring-0 focus-visible:ring-offset-0 resize-y p-3.5 leading-relaxed rounded-none"
+                  />
+                </div>
               </div>
 
               {/* Dynamic Test Cases Builder */}

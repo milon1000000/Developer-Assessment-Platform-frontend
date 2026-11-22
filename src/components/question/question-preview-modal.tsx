@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { IGlobalQuestion } from "@/types/question.type";
@@ -9,6 +10,7 @@ import {
   Check,
   CheckCircle2,
   Code2,
+  Copy,
   FileText,
   HelpCircle,
   Lock,
@@ -116,6 +118,34 @@ export function QuestionPreviewModal({
 
   const normalizedOptions = normalizeMcqOptions(question.mcqOptions);
   const normalizedTestCases = normalizeTestCases(question.testCases);
+
+  const starterCodeMap = React.useMemo<Record<string, string>>(() => {
+    if (!question?.starterCode) return {};
+    if (typeof question.starterCode === "string") {
+      return { javascript: question.starterCode };
+    }
+    if (typeof question.starterCode === "object") {
+      const res: Record<string, string> = {};
+      Object.entries(question.starterCode).forEach(([k, v]) => {
+        if (typeof v === "string" && v.trim()) {
+          res[k.toLowerCase()] = v;
+        }
+      });
+      return res;
+    }
+    return {};
+  }, [question?.starterCode]);
+
+  const availableLangs = Object.keys(starterCodeMap);
+  const [selectedLang, setSelectedLang] = React.useState<string>("");
+
+  React.useEffect(() => {
+    if (availableLangs.length > 0) {
+      if (!selectedLang || !starterCodeMap[selectedLang]) {
+        setSelectedLang(availableLangs[0]);
+      }
+    }
+  }, [availableLangs, selectedLang, starterCodeMap]);
 
   return (
     <div
@@ -230,19 +260,72 @@ export function QuestionPreviewModal({
           {question.type === "CODING" && (
             <>
               {/* Starter Code */}
-              {question.starterCode && (
+              {availableLangs.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Terminal className="size-3.5 text-primary" />
-                    Starter Code Template
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <Terminal className="size-3.5 text-primary" />
+                      Starter Code Templates ({availableLangs.length})
+                    </h3>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const code =
+                          starterCodeMap[selectedLang] ||
+                          starterCodeMap[availableLangs[0]] ||
+                          "";
+                        if (code) {
+                          navigator.clipboard.writeText(code);
+                          toast.success(
+                            `Copied ${selectedLang.toUpperCase()} template!`,
+                          );
+                        }
+                      }}
+                      className="h-6 text-[11px] gap-1 text-muted-foreground hover:text-foreground px-2 cursor-pointer"
+                    >
+                      <Copy className="size-3" />
+                      Copy Code
+                    </Button>
+                  </div>
+
+                  {/* Multi-language Selector Tabs */}
+                  {availableLangs.length > 1 && (
+                    <div className="flex flex-wrap gap-1 p-1 rounded-lg bg-muted/40 border border-border/60">
+                      {availableLangs.map((lang) => {
+                        const isSelected =
+                          (selectedLang || availableLangs[0]) === lang;
+                        const labelMap: Record<string, string> = {
+                          javascript: "JavaScript",
+                          typescript: "TypeScript",
+                          python: "Python",
+                          cpp: "C++",
+                          java: "Java",
+                        };
+                        return (
+                          <button
+                            key={lang}
+                            type="button"
+                            onClick={() => setSelectedLang(lang)}
+                            className={`px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
+                              isSelected
+                                ? "bg-background text-foreground shadow-xs border border-border/80"
+                                : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                            }`}
+                          >
+                            {labelMap[lang] || lang.toUpperCase()}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   <div className="rounded-xl border border-border/80 bg-zinc-950 p-4 font-mono text-xs text-zinc-300 overflow-x-auto">
-                    <pre>
-                      {question.starterCode.javascript ||
-                        question.starterCode.python ||
-                        question.starterCode.typescript ||
-                        question.starterCode.cpp ||
-                        JSON.stringify(question.starterCode, null, 2)}
+                    <pre className="whitespace-pre">
+                      {starterCodeMap[selectedLang] ||
+                        starterCodeMap[availableLangs[0]] ||
+                        "// No starter code template available"}
                     </pre>
                   </div>
                 </div>

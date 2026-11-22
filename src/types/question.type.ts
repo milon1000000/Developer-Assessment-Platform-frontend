@@ -20,6 +20,7 @@ export interface StarterCode {
   cpp?: string;
   java?: string;
   typescript?: string;
+  [language: string]: string | undefined;
 }
 
 export interface IGlobalQuestion {
