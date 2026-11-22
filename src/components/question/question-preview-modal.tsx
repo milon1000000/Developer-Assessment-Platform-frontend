@@ -108,16 +108,7 @@ export function QuestionPreviewModal({
   onEdit,
   isAdmin = false,
 }: QuestionPreviewModalProps) {
-  if (!isOpen || !question) return null;
-
-  const difficultyColors = {
-    EASY: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
-    MEDIUM: "border-amber-500/30 bg-amber-500/10 text-amber-400",
-    HARD: "border-rose-500/30 bg-rose-500/10 text-rose-400",
-  };
-
-  const normalizedOptions = normalizeMcqOptions(question.mcqOptions);
-  const normalizedTestCases = normalizeTestCases(question.testCases);
+  const [selectedLang, setSelectedLang] = React.useState<string>("");
 
   const starterCodeMap = React.useMemo<Record<string, string>>(() => {
     if (!question?.starterCode) return {};
@@ -137,7 +128,6 @@ export function QuestionPreviewModal({
   }, [question?.starterCode]);
 
   const availableLangs = Object.keys(starterCodeMap);
-  const [selectedLang, setSelectedLang] = React.useState<string>("");
 
   React.useEffect(() => {
     if (availableLangs.length > 0) {
@@ -146,6 +136,17 @@ export function QuestionPreviewModal({
       }
     }
   }, [availableLangs, selectedLang, starterCodeMap]);
+
+  if (!isOpen || !question) return null;
+
+  const difficultyColors = {
+    EASY: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+    MEDIUM: "border-amber-500/30 bg-amber-500/10 text-amber-400",
+    HARD: "border-rose-500/30 bg-rose-500/10 text-rose-400",
+  };
+
+  const normalizedOptions = normalizeMcqOptions(question.mcqOptions);
+  const normalizedTestCases = normalizeTestCases(question.testCases);
 
   return (
     <div
