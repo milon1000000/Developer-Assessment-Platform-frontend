@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Code2,
   Cpu,
+  LayoutDashboard,
   Loader2,
   LogIn,
   LogOut,
@@ -38,11 +39,33 @@ export function AuthShell({
   const logoutMutation = useLogout();
 
   const rawUser = currentUserData?.data as {
-    user?: { email?: string };
+    user?: {
+      email?: string;
+      role?: string;
+      name?: string;
+      developerProfile?: { name?: string };
+      recruiterProfile?: { name?: string };
+      adminProfile?: { name?: string };
+    };
+    profile?: { name?: string };
+    adminProfile?: { name?: string };
+    recruiterProfile?: { name?: string };
+    developerProfile?: { name?: string };
+    role?: string;
     email?: string;
+    name?: string;
   } | null;
-  const isAuthenticated =
-    !isUserLoading && !!(rawUser?.user?.email || rawUser?.email);
+
+  const user = rawUser?.user || rawUser;
+  const isAuthenticated = !isUserLoading && !!(user?.email || rawUser?.email);
+  const role = user?.role || rawUser?.role;
+
+  const dashboardHref =
+    role === "ADMIN"
+      ? "/admin/dashboard"
+      : role === "RECRUITER"
+        ? "/recruiter/dashboard"
+        : "/candidate/dashboard";
 
   const handleLogout = async () => {
     try {
@@ -108,28 +131,41 @@ export function AuthShell({
             {/* Dark / Light Mode Switcher */}
             <ThemeToggle />
 
-            {/* Login / Logout Toggle Button */}
+            {/* Login / Dashboard & Logout Toggle Button */}
             {isAuthenticated ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                disabled={logoutMutation.isPending}
-                className="h-8 gap-1.5 px-3 text-xs font-semibold border-border/80 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
-                title="Log out from DevAssess"
-              >
-                {logoutMutation.isPending ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <LogOut className="size-3.5" />
-                )}
-                <span>Logout</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                <Link href={dashboardHref}>
+                  <Button
+                    size="sm"
+                    className="h-8 gap-1.5 px-3 text-xs font-semibold shadow-xs bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer transition-all hover:scale-[1.02]"
+                    title="Go to Dashboard"
+                  >
+                    <LayoutDashboard className="size-3.5" />
+                    <span>Dashboard</span>
+                  </Button>
+                </Link>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  disabled={logoutMutation.isPending}
+                  className="h-8 gap-1.5 px-3 text-xs font-semibold border-border/80 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors cursor-pointer"
+                  title="Log out from DevAssess"
+                >
+                  {logoutMutation.isPending ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <LogOut className="size-3.5" />
+                  )}
+                  <span className="hidden sm:inline">Logout</span>
+                </Button>
+              </div>
             ) : (
               <Link href="/login">
                 <Button
                   size="sm"
-                  className="h-8 gap-1.5 px-3 text-xs font-semibold shadow-xs"
+                  className="h-8 gap-1.5 px-3 text-xs font-semibold shadow-xs cursor-pointer"
                   title="Sign in to your account"
                 >
                   <LogIn className="size-3.5" />
