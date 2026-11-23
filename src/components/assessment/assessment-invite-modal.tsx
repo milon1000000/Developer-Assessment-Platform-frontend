@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   useAssessmentInvites,
+  useAssessments,
   useDeleteAssessmentInvite,
   useResendAssessmentInvite,
   useSendAssessmentInvites,
@@ -20,6 +21,7 @@ import {
   Clock,
   Copy,
   ExternalLink,
+  FileCheck2,
   GraduationCap,
   Loader2,
   Mail,
@@ -35,18 +37,39 @@ import { toast } from "sonner";
 interface AssessmentInviteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  assessment: IAssessment | null;
+  assessment?: IAssessment | null;
 }
 
 export function AssessmentInviteModal({
   isOpen,
   onClose,
-  assessment,
+  assessment: propAssessment,
 }: AssessmentInviteModalProps) {
+  const [selectedAssessmentId, setSelectedAssessmentId] =
+    React.useState<string>("");
   const [emailsInput, setEmailsInput] = React.useState("");
   const [copied, setCopied] = React.useState(false);
 
-  const assessmentId = assessment?.id || "";
+  // Fetch recruiter's assessments in case modal was opened globally without a preselected assessment
+  const { data: assessmentsData } = useAssessments(
+    propAssessment ? undefined : { limit: 50, isActive: "true" },
+  );
+  const assessmentsList = assessmentsData?.data || [];
+
+  React.useEffect(() => {
+    if (propAssessment) {
+      setSelectedAssessmentId(propAssessment.id);
+    } else if (assessmentsList.length > 0 && !selectedAssessmentId) {
+      setSelectedAssessmentId(assessmentsList[0].id);
+    }
+  }, [propAssessment, assessmentsList, selectedAssessmentId]);
+
+  const activeAssessment =
+    propAssessment ||
+    assessmentsList.find((a) => a.id === selectedAssessmentId) ||
+    null;
+
+  const assessmentId = activeAssessment?.id || "";
   const { data: invitesData, isLoading: isLoadingInvites } =
     useAssessmentInvites(
       assessmentId,
@@ -61,8 +84,8 @@ export function AssessmentInviteModal({
   const invites = invitesData?.data || [];
 
   const handleCopyPublicLink = () => {
-    if (!assessment) return;
-    const link = `${window.location.origin}/candidate/assessment/${assessment.inviteToken}`;
+    if (!activeAssessment) return;
+    const link = `${window.location.origin}/candidate/assessment/${activeAssessment.inviteToken}`;
     navigator.clipboard.writeText(link);
     setCopied(true);
     toast.success("Assessment Link Copied", {
@@ -73,7 +96,12 @@ export function AssessmentInviteModal({
 
   const handleSendInvites = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!assessment) return;
+    if (!activeAssessment) {
+      toast.error("Assessment Required", {
+        description: "Please select an assessment to send invitations.",
+      });
+      return;
+    }
 
     // Split by comma, semicolon, space or newline and filter valid emails
     const rawList = emailsInput
@@ -93,7 +121,7 @@ export function AssessmentInviteModal({
 
     try {
       const res = await sendMutation.mutateAsync({
-        assessmentId: assessment.id,
+        assessmentId: activeAssessment.id,
         emails: validEmails,
       });
 
@@ -142,34 +170,40 @@ export function AssessmentInviteModal({
     }
   };
 
-  if (!isOpen || !assessment) return null;
+  if (!isOpen) return null;
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in-0 duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-background/80 backdrop-blur-sm animate-in fade-in-0 duration-200"
     >
       <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
 
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-border bg-card shadow-2xl z-10 overflow-hidden">
+      <div className="relative w-full max-w-2xl max-h-[92vh] flex flex-col rounded-2xl border border-border bg-card shadow-2xl z-10 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/80 px-5 py-4 bg-muted/20">
-          <div className="space-y-0.5">
+        <div className="flex items-center justify-between border-b border-border/80 px-4 sm:px-5 py-3 sm:py-4 bg-muted/20">
+          <div className="space-y-0.5 min-w-0 pr-2">
             <div className="flex items-center gap-2">
-              <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Mail className="size-4" />
               </span>
-              <h2 className="text-base font-bold text-foreground">
+              <h2 className="text-sm sm:text-base font-bold text-foreground truncate">
                 Candidate Invitations & Tracking
               </h2>
             </div>
-            <p className="text-xs text-muted-foreground truncate max-w-md">
-              Assessment:{" "}
-              <span className="font-semibold text-foreground">
-                {assessment.title}
-              </span>
-            </p>
+            {activeAssessment ? (
+              <p className="text-xs text-muted-foreground truncate max-w-md">
+                Assessment:{" "}
+                <span className="font-semibold text-foreground">
+                  {activeAssessment.title}
+                </span>
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Select an assessment to distribute candidate tokens.
+              </p>
+            )}
           </div>
 
           <Button
@@ -177,46 +211,70 @@ export function AssessmentInviteModal({
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="size-8 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer"
+            className="size-8 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
           >
             <X className="size-4" />
           </Button>
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-6">
-          {/* Quick Share Link Banner */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-primary/20 bg-primary/5">
-            <div className="space-y-0.5">
-              <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                <ExternalLink className="size-3.5 text-primary" />
-                Shareable Assessment Public URL
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                Candidates with this direct token link can immediately take this
-                test.
-              </p>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
+          {/* If opened globally, show assessment selector dropdown */}
+          {!propAssessment && (
+            <div className="space-y-1.5 p-3 rounded-xl border border-border/80 bg-muted/20">
+              <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <FileCheck2 className="size-3.5 text-primary" />
+                Select Target Assessment *
+              </Label>
+              <select
+                value={selectedAssessmentId}
+                onChange={(e) => setSelectedAssessmentId(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground focus:ring-1 focus:ring-primary font-medium cursor-pointer"
+              >
+                {assessmentsList.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.title} ({a.durationMinutes} mins • Pass: {a.passingScore}
+                    %)
+                  </option>
+                ))}
+              </select>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleCopyPublicLink}
-              className="h-8 text-xs font-semibold gap-1.5 shrink-0 border-primary/30 text-primary hover:bg-primary/10 cursor-pointer"
-            >
-              {copied ? (
-                <>
-                  <Check className="size-3.5 text-emerald-500" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="size-3.5" />
-                  Copy Test URL
-                </>
-              )}
-            </Button>
-          </div>
+          )}
+
+          {/* Quick Share Link Banner */}
+          {activeAssessment && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-primary/20 bg-primary/5">
+              <div className="space-y-0.5">
+                <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <ExternalLink className="size-3.5 text-primary" />
+                  Shareable Assessment Public URL
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Candidates with this direct token link can immediately take
+                  this test.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleCopyPublicLink}
+                className="h-8 text-xs font-semibold gap-1.5 shrink-0 border-primary/30 text-primary hover:bg-primary/10 cursor-pointer self-start sm:self-auto"
+              >
+                {copied ? (
+                  <>
+                    <Check className="size-3.5 text-emerald-500" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="size-3.5" />
+                    Copy Test URL
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
 
           {/* Section 1: Send Invites Form */}
           <form onSubmit={handleSendInvites} className="space-y-3">

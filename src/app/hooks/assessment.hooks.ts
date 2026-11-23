@@ -4,6 +4,7 @@ import {
   createAssessment,
   deleteAssessment,
   deleteAssessmentInvite,
+  getAllAssessmentInvites,
   getAssessmentById,
   getAssessmentByInviteToken,
   getAssessmentInvites,
@@ -75,6 +76,18 @@ export function useAssessmentInvites(
     queryKey: ASSESSMENT_QUERY_KEYS.invites(assessmentId, params),
     queryFn: () => getAssessmentInvites(assessmentId, params),
     enabled: Boolean(assessmentId) && enabled,
+  });
+}
+
+// Hook: Fetch all candidate invitations across all assessments (Recruiter Hub)
+export function useAllAssessmentInvites(
+  params?: AssessmentInviteQueryParams & { assessmentId?: string },
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...ASSESSMENT_QUERY_KEYS.all, "all-invites", params],
+    queryFn: () => getAllAssessmentInvites(params),
+    enabled,
   });
 }
 
@@ -193,6 +206,9 @@ export function useSendAssessmentInvites() {
       queryClient.invalidateQueries({
         queryKey: ASSESSMENT_QUERY_KEYS.detail(variables.assessmentId),
       });
+      queryClient.invalidateQueries({
+        queryKey: [...ASSESSMENT_QUERY_KEYS.all, "all-invites"],
+      });
     },
   });
 }
@@ -206,6 +222,9 @@ export function useResendAssessmentInvite() {
       queryClient.invalidateQueries({
         queryKey: [...ASSESSMENT_QUERY_KEYS.all, "invites"],
       });
+      queryClient.invalidateQueries({
+        queryKey: [...ASSESSMENT_QUERY_KEYS.all, "all-invites"],
+      });
     },
   });
 }
@@ -218,6 +237,9 @@ export function useDeleteAssessmentInvite() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [...ASSESSMENT_QUERY_KEYS.all, "invites"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [...ASSESSMENT_QUERY_KEYS.all, "all-invites"],
       });
     },
   });
