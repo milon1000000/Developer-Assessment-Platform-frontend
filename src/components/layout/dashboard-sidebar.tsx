@@ -69,6 +69,11 @@ const ADMIN_NAV_SECTIONS: NavSection[] = [
     section: "Management",
     items: [
       {
+        title: "Submissions",
+        href: "/admin/submissions",
+        icon: GraduationCap,
+      },
+      {
         title: "User Directory",
         href: "/admin/users",
         icon: Users,
