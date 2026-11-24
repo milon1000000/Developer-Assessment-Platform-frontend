@@ -48,6 +48,55 @@ interface LiveAssessmentIdeProps {
   };
 }
 
+function normalizeMcqOptions(
+  options: unknown,
+): Array<{ id: string; text: string }> {
+  if (!options) return [];
+
+  let parsed = options;
+  if (typeof options === "string") {
+    try {
+      parsed = JSON.parse(options);
+    } catch {
+      return [];
+    }
+  }
+
+  if (Array.isArray(parsed)) {
+    return parsed.map((item, index) => {
+      const fallbackLetter = String.fromCharCode(65 + index); // A, B, C, D...
+      if (typeof item === "string") {
+        return {
+          id: fallbackLetter,
+          text: item,
+        };
+      }
+      if (item && typeof item === "object") {
+        const anyItem = item as {
+          id?: string | number;
+          text?: string;
+          option?: string;
+          value?: string;
+          label?: string;
+          title?: string;
+        };
+        const id = anyItem.id ? String(anyItem.id) : fallbackLetter;
+        const text =
+          anyItem.text ||
+          anyItem.option ||
+          anyItem.value ||
+          anyItem.label ||
+          anyItem.title ||
+          `Option ${fallbackLetter}`;
+        return { id, text };
+      }
+      return { id: fallbackLetter, text: String(item) };
+    });
+  }
+
+  return [];
+}
+
 export function LiveAssessmentIde({
   initialSubmission,
   assessment,
@@ -407,7 +456,7 @@ export function LiveAssessmentIde({
 
           return (
             <button
-              key={q.id}
+              key={q.id ? `q-tab-${q.id}-${idx}` : `q-tab-idx-${idx}`}
               type="button"
               onClick={() => {
                 setActiveQuestionIndex(idx);
@@ -481,38 +530,65 @@ export function LiveAssessmentIde({
             )}
 
             {/* MCQ Options Selector */}
-            {currentQuestion?.type === "MCQ" && currentQuestion.mcqOptions && (
-              <div className="space-y-2 pt-2">
+            {currentQuestion?.type === "MCQ" && (
+              <div className="space-y-3 pt-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Select Correct Option:
                 </span>
-                <div className="space-y-2">
-                  {currentQuestion.mcqOptions.map((opt: any) => {
-                    const isSelected =
-                      answersMap[currentQuestion.id]?.selectedOption === opt.id;
+                {(() => {
+                  const normalizedOptions = normalizeMcqOptions(
+                    currentQuestion.mcqOptions,
+                  );
+                  if (normalizedOptions.length === 0) {
                     return (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => handleSelectOption(opt.id)}
-                        className={cn(
-                          "w-full text-left p-3 rounded-xl border text-xs font-medium transition-all flex items-center justify-between cursor-pointer",
-                          isSelected
-                            ? "bg-primary/15 border-primary text-primary font-bold shadow-xs"
-                            : "bg-card border-border hover:bg-muted/30 text-foreground",
-                        )}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="size-5 rounded-md bg-muted flex items-center justify-center font-mono text-[10px] uppercase">
-                            {opt.id}
-                          </span>
-                          <span>{opt.text}</span>
-                        </span>
-                        {isSelected && <CheckCircle2 className="size-4" />}
-                      </button>
+                      <p className="text-xs text-muted-foreground italic p-3 rounded-xl border border-dashed border-border/70">
+                        No options provided for this question.
+                      </p>
                     );
-                  })}
-                </div>
+                  }
+                  const selected =
+                    answersMap[currentQuestion.id]?.selectedOption;
+                  return (
+                    <div className="space-y-2">
+                      {normalizedOptions.map((opt, index) => {
+                        const isSelected =
+                          selected === opt.id || selected === opt.text;
+                        return (
+                          <button
+                            key={`mcq-opt-${currentQuestion.id}-${opt.id}-${index}`}
+                            type="button"
+                            onClick={() => handleSelectOption(opt.id)}
+                            className={cn(
+                              "w-full text-left p-3.5 rounded-xl border text-xs font-medium transition-all flex items-center justify-between cursor-pointer",
+                              isSelected
+                                ? "bg-primary/15 border-primary text-primary font-bold shadow-xs ring-1 ring-primary/40"
+                                : "bg-card border-border hover:bg-muted/40 text-foreground",
+                            )}
+                          >
+                            <span className="flex items-center gap-3">
+                              <span
+                                className={cn(
+                                  "size-6 rounded-lg flex items-center justify-center font-mono text-xs font-bold uppercase",
+                                  isSelected
+                                    ? "bg-primary text-primary-foreground shadow-xs"
+                                    : "bg-muted text-muted-foreground border border-border/70",
+                                )}
+                              >
+                                {opt.id}
+                              </span>
+                              <span className="text-sm font-medium">
+                                {opt.text}
+                              </span>
+                            </span>
+                            {isSelected && (
+                              <CheckCircle2 className="size-4 text-primary shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -643,7 +719,7 @@ export function LiveAssessmentIde({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {runResult.testCaseResults.map((tc, i) => (
                       <div
-                        key={i}
+                        key={`tc-${tc.id ?? i}`}
                         className={cn(
                           "p-2.5 rounded-xl border text-xs font-mono space-y-1",
                           tc.passed
