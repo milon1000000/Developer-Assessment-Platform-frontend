@@ -3,11 +3,13 @@ import {
   approveRecruiterApplication,
   changeUserStatus,
   deleteUser,
+  getAdminProfile,
   getAllUsers,
   getPendingRecruiterApplications,
   getRecruiterProfile,
   getUserById,
   rejectRecruiterApplication,
+  updateAdminProfile,
   updateRecruiterProfile,
 } from "@/api/user-management.api";
 import type {
@@ -140,6 +142,30 @@ export function useUpdateRecruiterProfile() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: USER_MANAGEMENT_QUERY_KEYS.recruiterProfile(),
+      });
+      queryClient.invalidateQueries({ queryKey: ["auth", "currentUser"] });
+    },
+  });
+}
+
+// Hook: Fetch admin profile
+export function useAdminProfile() {
+  return useQuery({
+    queryKey: [...USER_MANAGEMENT_QUERY_KEYS.all, "admin-profile"],
+    queryFn: () => getAdminProfile(),
+  });
+}
+
+// Hook: Update admin profile
+export function useUpdateAdminProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      payload: { name?: string; phone?: string; avatarUrl?: string } | FormData,
+    ) => updateAdminProfile(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...USER_MANAGEMENT_QUERY_KEYS.all, "admin-profile"],
       });
       queryClient.invalidateQueries({ queryKey: ["auth", "currentUser"] });
     },

@@ -23,6 +23,7 @@ import {
   Menu,
   Settings,
   ShieldAlert,
+  User,
   Users,
   X,
   type LucideIcon,
@@ -145,6 +146,51 @@ const RECRUITER_NAV_SECTIONS: NavSection[] = [
   },
 ];
 
+const DEVELOPER_NAV_SECTIONS: NavSection[] = [
+  {
+    section: "Developer Portal",
+    items: [
+      {
+        title: "Dashboard",
+        href: "/candidate/dashboard",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "My Submissions",
+        href: "/candidate/submissions",
+        icon: GraduationCap,
+      },
+    ],
+  },
+  {
+    section: "Assessment Suite",
+    items: [
+      {
+        title: "Live Challenges",
+        href: "/candidate/dashboard#assessments",
+        icon: Code2,
+        badge: "Sandbox",
+        badgeVariant: "success",
+      },
+    ],
+  },
+  {
+    section: "Account & Stack",
+    items: [
+      {
+        title: "Profile & Tech Stack",
+        href: "/candidate/settings?tab=profile",
+        icon: User,
+      },
+      {
+        title: "Password & Security",
+        href: "/candidate/settings?tab=security",
+        icon: Settings,
+      },
+    ],
+  },
+];
+
 function getInitials(name?: string) {
   if (!name) return "U";
   const clean = name.replace(/[^\w\s]/gi, "").trim();
@@ -155,7 +201,11 @@ function getInitials(name?: string) {
   return name.slice(0, 2).toUpperCase();
 }
 
-export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
+export function DashboardSidebar({
+  role,
+}: {
+  role: "ADMIN" | "RECRUITER" | "DEVELOPER" | "CANDIDATE";
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: userData } = useCurrentUser();
@@ -164,8 +214,13 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [isMobileOpen, setIsMobileOpen] = React.useState(false);
 
+  const normalizedRole = role === "CANDIDATE" ? "DEVELOPER" : role;
   const sections =
-    role === "ADMIN" ? ADMIN_NAV_SECTIONS : RECRUITER_NAV_SECTIONS;
+    normalizedRole === "ADMIN"
+      ? ADMIN_NAV_SECTIONS
+      : normalizedRole === "RECRUITER"
+        ? RECRUITER_NAV_SECTIONS
+        : DEVELOPER_NAV_SECTIONS;
 
   const rawUser = userData?.data as {
     user?: {
@@ -178,17 +233,31 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
         companyName?: string;
         avatarUrl?: string;
       };
+      developerProfile?: {
+        name?: string;
+        avatarUrl?: string;
+        experienceYears?: number;
+        skills?: string[];
+      };
     };
     profile?: {
       name?: string;
       companyName?: string;
       avatarUrl?: string;
+      experienceYears?: number;
+      skills?: string[];
     };
     adminProfile?: { name?: string; avatarUrl?: string };
     recruiterProfile?: {
       name?: string;
       companyName?: string;
       avatarUrl?: string;
+    };
+    developerProfile?: {
+      name?: string;
+      avatarUrl?: string;
+      experienceYears?: number;
+      skills?: string[];
     };
     name?: string;
     email?: string;
@@ -201,22 +270,34 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
     profile?.name ||
     user?.adminProfile?.name ||
     user?.recruiterProfile?.name ||
+    user?.developerProfile?.name ||
     rawUser?.adminProfile?.name ||
     rawUser?.recruiterProfile?.name ||
+    rawUser?.developerProfile?.name ||
     rawUser?.name ||
     user?.email?.split("@")[0] ||
-    (role === "ADMIN" ? "Admin" : "Recruiter");
+    (normalizedRole === "ADMIN"
+      ? "Admin"
+      : normalizedRole === "RECRUITER"
+        ? "Recruiter"
+        : "Developer");
 
   const avatarUrl =
     profile?.avatarUrl ||
     user?.adminProfile?.avatarUrl ||
-    user?.recruiterProfile?.avatarUrl;
+    user?.recruiterProfile?.avatarUrl ||
+    user?.developerProfile?.avatarUrl;
   const subtitle =
-    role === "ADMIN"
+    normalizedRole === "ADMIN"
       ? "Super Admin"
-      : profile?.companyName ||
-        user?.recruiterProfile?.companyName ||
-        "Hiring Team";
+      : normalizedRole === "RECRUITER"
+        ? profile?.companyName ||
+          user?.recruiterProfile?.companyName ||
+          "Hiring Team"
+        : user?.developerProfile?.experienceYears ||
+            rawUser?.developerProfile?.experienceYears
+          ? `${user?.developerProfile?.experienceYears || rawUser?.developerProfile?.experienceYears} Yrs Exp`
+          : "Candidate Account";
 
   const handleLogout = async () => {
     try {
@@ -244,9 +325,11 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
               <>
                 <Link
                   href={
-                    role === "ADMIN"
+                    normalizedRole === "ADMIN"
                       ? "/admin/dashboard"
-                      : "/recruiter/dashboard"
+                      : normalizedRole === "RECRUITER"
+                        ? "/recruiter/dashboard"
+                        : "/candidate/dashboard"
                   }
                   onClick={() => {
                     if (isMobileDrawer) setIsMobileOpen(false);
@@ -256,9 +339,11 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
                   <div
                     className={cn(
                       "flex size-9 shrink-0 items-center justify-center rounded-xl font-mono text-xs font-bold text-white shadow-md shadow-primary/20",
-                      role === "ADMIN"
+                      normalizedRole === "ADMIN"
                         ? "bg-gradient-to-tr from-violet-600 to-indigo-500"
-                        : "bg-gradient-to-tr from-cyan-600 to-blue-600",
+                        : normalizedRole === "RECRUITER"
+                          ? "bg-gradient-to-tr from-cyan-600 to-blue-600"
+                          : "bg-gradient-to-tr from-emerald-600 to-teal-500",
                     )}
                   >
                     &lt;/&gt;
@@ -270,10 +355,18 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
                     <span
                       className={cn(
                         "text-[10px] font-bold tracking-wider uppercase",
-                        role === "ADMIN" ? "text-violet-400" : "text-cyan-400",
+                        normalizedRole === "ADMIN"
+                          ? "text-violet-400"
+                          : normalizedRole === "RECRUITER"
+                            ? "text-cyan-400"
+                            : "text-emerald-500 dark:text-emerald-400",
                       )}
                     >
-                      {role === "ADMIN" ? "Admin Console" : "Recruiter"}
+                      {normalizedRole === "ADMIN"
+                        ? "Admin Console"
+                        : normalizedRole === "RECRUITER"
+                          ? "Recruiter"
+                          : "Candidate"}
                     </span>
                   </div>
                 </Link>
@@ -305,9 +398,11 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
                 onClick={() => setIsCollapsed(false)}
                 className={cn(
                   "group relative flex size-9 shrink-0 items-center justify-center rounded-xl font-mono text-xs font-bold text-white shadow-md shadow-primary/20 transition-all hover:scale-105 cursor-pointer",
-                  role === "ADMIN"
+                  normalizedRole === "ADMIN"
                     ? "bg-gradient-to-tr from-violet-600 to-indigo-500"
-                    : "bg-gradient-to-tr from-cyan-600 to-blue-600",
+                    : normalizedRole === "RECRUITER"
+                      ? "bg-gradient-to-tr from-cyan-600 to-blue-600"
+                      : "bg-gradient-to-tr from-emerald-600 to-teal-500",
                 )}
                 title="Click to expand sidebar"
               >
@@ -341,9 +436,11 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
                         className={cn(
                           "group flex items-center gap-3 rounded-lg px-2.5 py-2 text-xs font-medium transition-all",
                           isActive
-                            ? role === "ADMIN"
+                            ? normalizedRole === "ADMIN"
                               ? "bg-violet-600/15 text-violet-400 font-semibold border border-violet-500/30 shadow-xs"
-                              : "bg-primary/15 text-primary font-semibold border border-primary/30 shadow-xs"
+                              : normalizedRole === "RECRUITER"
+                                ? "bg-primary/15 text-primary font-semibold border border-primary/30 shadow-xs"
+                                : "bg-emerald-600/15 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/30 shadow-xs"
                             : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
                           collapsed && "justify-center px-2",
                         )}
@@ -353,9 +450,11 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
                           className={cn(
                             "size-4 shrink-0 transition-transform group-hover:scale-110",
                             isActive
-                              ? role === "ADMIN"
+                              ? normalizedRole === "ADMIN"
                                 ? "text-violet-400"
-                                : "text-primary"
+                                : normalizedRole === "RECRUITER"
+                                  ? "text-primary"
+                                  : "text-emerald-600 dark:text-emerald-400"
                               : "text-muted-foreground",
                           )}
                         />
@@ -451,7 +550,13 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
       {/* Mobile Hamburger Toggle Bar */}
       <div className="sticky top-0 z-40 flex h-14 w-full shrink-0 items-center justify-between border-b border-border/60 bg-background/95 px-4 backdrop-blur-md md:hidden">
         <Link
-          href={role === "ADMIN" ? "/admin/dashboard" : "/recruiter/dashboard"}
+          href={
+            normalizedRole === "ADMIN"
+              ? "/admin/dashboard"
+              : normalizedRole === "RECRUITER"
+                ? "/recruiter/dashboard"
+                : "/candidate/dashboard"
+          }
           className="flex items-center gap-2 font-bold tracking-tight"
         >
           <div className="flex size-7 items-center justify-center rounded-lg bg-primary font-mono text-xs font-bold text-white">
@@ -461,7 +566,7 @@ export function DashboardSidebar({ role }: { role: "ADMIN" | "RECRUITER" }) {
             DevAssess
           </span>
           <Badge variant="outline" className="text-[10px] uppercase font-bold">
-            {role}
+            {normalizedRole}
           </Badge>
         </Link>
 

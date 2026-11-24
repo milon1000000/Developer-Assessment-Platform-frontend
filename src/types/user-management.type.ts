@@ -1,7 +1,7 @@
 import type { ApiResponse } from "./auth.type";
 
 export type UserRole = "ADMIN" | "RECRUITER" | "DEVELOPER";
-export type UserStatus = "ACTIVE" | "BLOCKED" | "SUSPENDED";
+export type UserStatus = "ACTIVE" | "PENDING" | "SUSPENDED";
 export type RecruiterApplicationStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface IPlatformUser {

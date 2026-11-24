@@ -61,6 +61,10 @@ export default function AdminUsersPage() {
   );
   const [rejectionReason, setRejectionReason] = React.useState("");
 
+  // Confirmation modal state for Block / Activate
+  const [confirmStatusUser, setConfirmStatusUser] =
+    React.useState<IPlatformUser | null>(null);
+
   // Queries
   const { data: usersData, isLoading: isUsersLoading } = useAllUsers({
     search: search.trim() || undefined,
@@ -80,17 +84,27 @@ export default function AdminUsersPage() {
   const users = usersData?.data || [];
   const applications = appsData?.data || [];
 
-  const handleToggleStatus = async (user: IPlatformUser) => {
+  const handleConfirmStatusChange = async () => {
+    if (!confirmStatusUser) return;
     const nextStatus: UserStatus =
-      user.status === "ACTIVE" ? "BLOCKED" : "ACTIVE";
+      confirmStatusUser.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
     try {
       await changeStatusMutation.mutateAsync({
-        id: user.id,
+        id: confirmStatusUser.id,
         status: nextStatus,
       });
-      toast.success(`User ${user.email} marked as ${nextStatus.toLowerCase()}`);
-    } catch {
-      toast.error("Failed to update user status");
+      toast.success(
+        nextStatus === "SUSPENDED"
+          ? `User ${confirmStatusUser.email} has been blocked`
+          : `User ${confirmStatusUser.email} has been activated`,
+      );
+      setConfirmStatusUser(null);
+    } catch (err: any) {
+      const msg =
+        err?.response?._data?.message ||
+        err?.message ||
+        "Failed to update user status";
+      toast.error(msg);
     }
   };
 
@@ -266,7 +280,7 @@ export default function AdminUsersPage() {
                 >
                   <option value="ALL">All Status</option>
                   <option value="ACTIVE">Active</option>
-                  <option value="BLOCKED">Blocked</option>
+                  <option value="SUSPENDED">Blocked</option>
                 </select>
               </div>
             </div>
@@ -370,7 +384,7 @@ export default function AdminUsersPage() {
                                     : "border-rose-500/40 text-rose-500 bg-rose-500/10",
                                 )}
                               >
-                                {u.status}
+                                {u.status === "ACTIVE" ? "Active" : "Blocked"}
                               </Badge>
                             </td>
 
@@ -396,7 +410,7 @@ export default function AdminUsersPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleToggleStatus(u)}
+                                  onClick={() => setConfirmStatusUser(u)}
                                   disabled={changeStatusMutation.isPending}
                                   className={cn(
                                     "h-7 px-2 text-xs font-semibold cursor-pointer",

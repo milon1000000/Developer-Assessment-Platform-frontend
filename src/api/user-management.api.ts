@@ -101,3 +101,18 @@ export function updateRecruiterProfile(
     body: payload,
   });
 }
+
+// 10. Get Admin profile
+export function getAdminProfile(): Promise<ApiResponse<any>> {
+  return apiClient("/user/admin/profile");
+}
+
+// 11. Update Admin profile
+export function updateAdminProfile(
+  payload: { name?: string; phone?: string; avatarUrl?: string } | FormData,
+): Promise<ApiResponse<any>> {
+  return apiClient("/user/admin/profile", {
+    method: "PATCH",
+    body: payload,
+  });
+}

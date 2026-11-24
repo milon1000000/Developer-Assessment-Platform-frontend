@@ -7,11 +7,25 @@ export const setAuthToken = (token: string | null) => {
   if (typeof window !== "undefined") {
     if (token) {
       localStorage.setItem("accessToken", token);
+      document.cookie = `accessToken=${token}; path=/; max-age=604800; SameSite=Lax`;
     } else {
       localStorage.removeItem("accessToken");
+      document.cookie = "accessToken=; path=/; max-age=0; SameSite=Lax";
     }
   }
 };
+
+// Auto-sync existing token to cookies on client load
+if (typeof window !== "undefined") {
+  try {
+    const existingToken = localStorage.getItem("accessToken");
+    if (existingToken && !document.cookie.includes("accessToken=")) {
+      document.cookie = `accessToken=${existingToken}; path=/; max-age=604800; SameSite=Lax`;
+    }
+  } catch {
+    // Ignore in non-browser environments
+  }
+}
 
 export const getAuthToken = (): string | null => {
   if (typeof window !== "undefined") {
