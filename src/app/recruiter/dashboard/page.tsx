@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCurrentUser, useLogout } from "@/app/hooks/auth.hooks";
+import { useRecruiterDashboard } from "@/app/hooks/dashboard.hooks";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,6 +25,12 @@ import {
   Search,
   Sparkles,
   Loader2,
+  GraduationCap,
+  Mail,
+  FileCheck2,
+  Award,
+  ArrowRight,
+  TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,7 +46,9 @@ function getInitials(name?: string) {
 
 export default function RecruiterDashboardPage() {
   const router = useRouter();
-  const { data: userData, isLoading } = useCurrentUser();
+  const { data: userData, isLoading: isUserLoading } = useCurrentUser();
+  const { data: dashboardData, isLoading: isDashboardLoading } =
+    useRecruiterDashboard();
   const logoutMutation = useLogout();
 
   const rawData = userData?.data as {
@@ -70,6 +79,9 @@ export default function RecruiterDashboardPage() {
 
   const user = rawData?.user || rawData;
   const recruiter = rawData?.profile || user?.recruiterProfile;
+  const counts = dashboardData?.data?.counts;
+  const recentSubmissions = dashboardData?.data?.recentSubmissions || [];
+  const topAssessments = dashboardData?.data?.topAssessments || [];
 
   const handleLogout = async () => {
     try {
@@ -81,7 +93,7 @@ export default function RecruiterDashboardPage() {
     }
   };
 
-  if (isLoading) {
+  if (isUserLoading || isDashboardLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
@@ -134,8 +146,9 @@ export default function RecruiterDashboardPage() {
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* Recruiter Banner */}
         <div className="rounded-2xl border border-border/70 bg-gradient-to-r from-card/90 via-card/70 to-card/90 p-6 shadow-xl backdrop-blur-md">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <Avatar className="size-14 rounded-2xl border border-primary/25 bg-primary/10 text-primary shadow-sm">
                 <AvatarImage
@@ -162,51 +175,207 @@ export default function RecruiterDashboardPage() {
                 </p>
               </div>
             </div>
-            <Button size="sm" className="gap-1.5 text-xs h-9">
-              <PlusCircle className="size-3.5" />
-              Create Assessment
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link href="/recruiter/invites">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 text-xs h-9"
+                >
+                  <Mail className="size-3.5" />
+                  Invite Candidates
+                </Button>
+              </Link>
+              <Link href="/recruiter/assessments">
+                <Button size="sm" className="gap-1.5 text-xs h-9">
+                  <PlusCircle className="size-3.5" />
+                  Manage Assessments
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Live Metrics Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border-border/60 bg-card/60">
-            <CardHeader className="pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">
                 Active Assessments
               </CardTitle>
+              <FileCheck2 className="size-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">4</div>
+              <div className="text-2xl font-bold">
+                {counts?.activeAssessments ?? 0}
+              </div>
               <p className="text-[11px] text-muted-foreground mt-1">
-                12 Candidates Invited
+                {counts?.totalAssessments ?? 0} Total Created
               </p>
             </CardContent>
           </Card>
+
           <Card className="border-border/60 bg-card/60">
-            <CardHeader className="pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">
-                Completed Tests
+                Candidates Invited
               </CardTitle>
+              <Mail className="size-4 text-indigo-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">18</div>
-              <p className="text-[11px] text-emerald-500 font-medium mt-1">
-                8 Passed Benchmark
+              <div className="text-2xl font-bold">
+                {counts?.totalInvites ?? 0}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {counts?.acceptedInvites ?? 0} Accepted (
+                {counts?.pendingInvites ?? 0} Pending)
               </p>
             </CardContent>
           </Card>
+
           <Card className="border-border/60 bg-card/60">
-            <CardHeader className="pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">
+                Submissions
+              </CardTitle>
+              <GraduationCap className="size-4 text-violet-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {counts?.completedSubmissions ?? 0}
+              </div>
+              <p className="text-[11px] text-emerald-500 font-medium mt-1">
+                {counts?.passedCandidates ?? 0} Passed ({counts?.passRate ?? 0}%
+                Pass Rate)
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 bg-card/60">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">
                 Avg. Candidate Score
               </CardTitle>
+              <Award className="size-4 text-emerald-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">78%</div>
+              <div className="text-2xl font-bold">
+                {counts?.averageScore ?? 0}%
+              </div>
               <p className="text-[11px] text-muted-foreground mt-1">
-                Across all tracks
+                Across all candidate tests
               </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Dual Cards: Recent Candidate Submissions & Top Assessments */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Candidate Submissions */}
+          <Card className="border-border/70 bg-card/70">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <CardTitle className="text-base font-bold">
+                  Candidate Submissions
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Latest submissions ready for recruiter evaluation
+                </CardDescription>
+              </div>
+              <Link
+                href="/recruiter/submissions"
+                className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+              >
+                Review all <ArrowRight className="size-3" />
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {recentSubmissions.length > 0 ? (
+                <div className="divide-y divide-border/50 space-y-2">
+                  {recentSubmissions.map((sub) => (
+                    <div
+                      key={sub.id}
+                      className="pt-2 flex items-center justify-between text-xs"
+                    >
+                      <div>
+                        <div className="font-semibold text-foreground">
+                          {sub.developer?.name ||
+                            sub.developer?.user?.email ||
+                            "Candidate"}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground font-mono">
+                          {sub.assessment?.title || "Assessment"}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge
+                          variant="outline"
+                          className={
+                            sub.isPassed
+                              ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/10 text-[10px]"
+                              : "border-rose-500/40 text-rose-400 bg-rose-500/10 text-[10px]"
+                          }
+                        >
+                          {sub.percentage}% {sub.isPassed ? "PASSED" : "FAILED"}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground py-4 text-center">
+                  No candidate submissions yet.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Active Assessments Performance */}
+          <Card className="border-border/70 bg-card/70">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div>
+                <CardTitle className="text-base font-bold">
+                  Top Assessments
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Highest activity screening benchmarks
+                </CardDescription>
+              </div>
+              <Link
+                href="/recruiter/assessments"
+                className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+              >
+                All Assessments <ArrowRight className="size-3" />
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {topAssessments.length > 0 ? (
+                <div className="divide-y divide-border/50 space-y-2">
+                  {topAssessments.map((ass) => (
+                    <div
+                      key={ass.id}
+                      className="pt-2 flex items-center justify-between text-xs"
+                    >
+                      <div>
+                        <div className="font-semibold text-foreground">
+                          {ass.title}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {ass.durationMinutes} Mins • Passing{" "}
+                          {ass.passingScore}%
+                        </div>
+                      </div>
+                      <div className="text-right text-[11px] font-mono text-muted-foreground">
+                        {ass._count?.submissions || 0} Submissions
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground py-4 text-center">
+                  No active assessments found.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
