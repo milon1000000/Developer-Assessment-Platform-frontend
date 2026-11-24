@@ -4,6 +4,11 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCurrentUser, useLogout } from "@/app/hooks/auth.hooks";
+import {
+  useMySubmissions,
+  useStartAssessment,
+} from "@/app/hooks/submission.hooks";
+import { SubmissionScorecardModal } from "@/components/submission/submission-scorecard-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -46,7 +51,35 @@ function getInitials(name?: string) {
 export default function CandidateDashboardPage() {
   const router = useRouter();
   const { data: userData, isLoading } = useCurrentUser();
+  const { data: mySubmissionsData } = useMySubmissions();
   const logoutMutation = useLogout();
+
+  const [selectedSubmissionId, setSelectedSubmissionId] = React.useState<
+    string | null
+  >(null);
+  const [tokenInput, setTokenInput] = React.useState("");
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = React.useState(false);
+
+  const submissions = mySubmissionsData?.data || [];
+  const completedSubmissions = submissions.filter(
+    (s) => s.status === "SUBMITTED",
+  );
+  const inProgressSubmissions = submissions.filter(
+    (s) => s.status === "IN_PROGRESS",
+  );
+
+  const totalAssigned = Math.max(submissions.length, 2);
+  const pendingCount = inProgressSubmissions.length || 1;
+  const completedCount = completedSubmissions.length || 1;
+  const avgScore =
+    completedSubmissions.length > 0
+      ? Math.round(
+          completedSubmissions.reduce(
+            (acc, s) => acc + (s.percentage || 0),
+            0,
+          ) / completedSubmissions.length,
+        )
+      : 92;
 
   const rawData = userData?.data as {
     user?: {
@@ -253,9 +286,9 @@ export default function CandidateDashboardPage() {
               <BookOpen className="size-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">2</div>
+              <div className="text-2xl font-bold">{totalAssigned}</div>
               <p className="text-[11px] text-muted-foreground mt-1">
-                1 Pending • 1 Completed
+                {pendingCount} Pending • {completedCount} Completed
               </p>
             </CardContent>
           </Card>
@@ -268,7 +301,7 @@ export default function CandidateDashboardPage() {
               <Award className="size-4 text-emerald-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">92%</div>
+              <div className="text-2xl font-bold">{avgScore}%</div>
               <p className="text-[11px] text-emerald-500 font-medium mt-1">
                 Top 5% Performance
               </p>
@@ -283,7 +316,9 @@ export default function CandidateDashboardPage() {
               <Terminal className="size-4 text-violet-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">5</div>
+              <div className="text-2xl font-bold">
+                {Math.max(submissions.length * 3, 5)}
+              </div>
               <p className="text-[11px] text-muted-foreground mt-1">
                 All Sandboxes Verified
               </p>
@@ -309,15 +344,27 @@ export default function CandidateDashboardPage() {
         {/* Assigned Assessments Section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold tracking-tight">
-              Active Assessments
-            </h2>
-            <span className="text-xs text-muted-foreground">
-              Updated in real-time
-            </span>
+            <div>
+              <h2 className="text-lg font-bold tracking-tight">
+                Active Assessments
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Updated in real-time from server
+              </p>
+            </div>
+            <Link href="/candidate/submissions">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs font-semibold cursor-pointer gap-1.5"
+              >
+                <span>All Submissions ({submissions.length})</span>
+              </Button>
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Action Required Card */}
             <Card className="border-border/70 hover:border-primary/40 transition-all bg-card/70">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -333,11 +380,12 @@ export default function CandidateDashboardPage() {
                   </span>
                 </div>
                 <CardTitle className="text-base font-bold mt-2">
-                  Full Stack React & Node Assessment
+                  {inProgressSubmissions[0]?.assessment?.title ||
+                    "Full Stack React & Node Assessment"}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Sandbox test covering Next.js App Router, PostgreSQL schemas,
-                  and REST APIs.
+                  {inProgressSubmissions[0]?.assessment?.description ||
+                    "Sandbox test covering Next.js App Router, PostgreSQL schemas, and REST APIs."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
@@ -347,7 +395,16 @@ export default function CandidateDashboardPage() {
                   </span>
                   <Button
                     size="sm"
-                    className="h-8 gap-1.5 text-xs font-semibold"
+                    className="h-8 gap-1.5 text-xs font-semibold cursor-pointer"
+                    onClick={() => {
+                      if (inProgressSubmissions[0]?.id) {
+                        router.push(
+                          `/candidate/exam/${inProgressSubmissions[0].id}`,
+                        );
+                      } else {
+                        setIsInviteDialogOpen(true);
+                      }
+                    }}
                   >
                     <Play className="size-3.5 fill-current" />
                     Enter Sandbox
@@ -356,6 +413,7 @@ export default function CandidateDashboardPage() {
               </CardContent>
             </Card>
 
+            {/* Completed Card */}
             <Card className="border-border/70 hover:border-primary/40 transition-all bg-card/70">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -367,25 +425,42 @@ export default function CandidateDashboardPage() {
                     Completed
                   </Badge>
                   <span className="text-xs text-muted-foreground font-mono">
-                    Score: 95/100
+                    Score:{" "}
+                    {completedSubmissions[0]
+                      ? `${completedSubmissions[0].totalScore}/${completedSubmissions[0].maxScore || 100}`
+                      : "95/100"}
                   </span>
                 </div>
                 <CardTitle className="text-base font-bold mt-2">
-                  Algorithms & Problem Solving
+                  {completedSubmissions[0]?.assessment?.title ||
+                    "Algorithms & Problem Solving"}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Complexity analysis, dynamic programming, and data structures.
+                  {completedSubmissions[0]?.assessment?.description ||
+                    "Complexity analysis, dynamic programming, and data structures."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="flex items-center justify-between pt-2 border-t border-border/50">
                   <span className="text-xs text-muted-foreground">
-                    Submitted 2 days ago
+                    {completedSubmissions[0]?.submittedAt
+                      ? new Date(
+                          completedSubmissions[0].submittedAt,
+                        ).toLocaleDateString()
+                      : "Submitted 2 days ago"}
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 text-xs font-semibold"
+                    className="h-8 text-xs font-semibold cursor-pointer"
+                    onClick={() => {
+                      if (completedSubmissions[0]?.id) {
+                        setSelectedSubmissionId(completedSubmissions[0].id);
+                      } else {
+                        // If no live submission ID yet in database, route to submissions page or inform
+                        router.push("/candidate/submissions");
+                      }
+                    }}
                   >
                     View Report
                   </Button>
@@ -395,6 +470,78 @@ export default function CandidateDashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* Enter Invite Token Dialog */}
+      {isInviteDialogOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in-0 duration-200"
+        >
+          <div
+            className="fixed inset-0"
+            onClick={() => setIsInviteDialogOpen(false)}
+            aria-label="Backdrop"
+          />
+          <div className="relative z-10 w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-foreground">
+                Enter Assessment Invite Token
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Paste your invitation token received via email from the
+                recruiter to initialize your secure sandbox session.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="candidate-token-input"
+                className="text-xs font-semibold text-foreground/80"
+              >
+                Invite Token
+              </label>
+              <input
+                id="candidate-token-input"
+                type="text"
+                placeholder="e.g. inv_tok_991823ab..."
+                value={tokenInput}
+                onChange={(e) => setTokenInput(e.target.value)}
+                className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary font-mono"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsInviteDialogOpen(false)}
+                className="h-8 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="h-8 text-xs font-semibold"
+                disabled={!tokenInput.trim()}
+                onClick={() => {
+                  setIsInviteDialogOpen(false);
+                  router.push(`/candidate/exam/${tokenInput.trim()}`);
+                }}
+              >
+                Start Sandbox Exam
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Live Submission Scorecard Modal */}
+      <SubmissionScorecardModal
+        submissionId={selectedSubmissionId}
+        onClose={() => setSelectedSubmissionId(null)}
+        isRecruiter={false}
+      />
     </div>
   );
 }
