@@ -107,69 +107,31 @@ export default function RecruiterDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20">
-                <Building2 className="size-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-base font-bold tracking-tight">
-                  DevAssess{" "}
-                  <span className="text-primary text-xs font-semibold">
-                    RECRUITER
-                  </span>
-                </span>
-                <span className="text-[10px] text-muted-foreground font-medium -mt-1">
-                  Talent Acquisition Portal
-                </span>
-              </div>
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              disabled={logoutMutation.isPending}
-              className="h-8 gap-1.5 px-3 text-xs font-semibold hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
-            >
-              <LogOut className="size-3.5" />
-              <span>Logout</span>
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="space-y-8">
         {/* Recruiter Banner */}
-        <div className="rounded-2xl border border-border/70 bg-gradient-to-r from-card/90 via-card/70 to-card/90 p-6 shadow-xl backdrop-blur-md">
+        <div className="rounded-2xl border border-border/70 bg-gradient-to-r from-card/90 via-card/70 to-card/90 p-4 sm:p-6 shadow-xl backdrop-blur-md">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="size-14 rounded-2xl border border-primary/25 bg-primary/10 text-primary shadow-sm">
+            <div className="flex items-start sm:items-center gap-3.5 sm:gap-4 min-w-0">
+              <Avatar className="size-12 sm:size-14 shrink-0 rounded-2xl border border-primary/25 bg-primary/10 text-primary shadow-sm">
                 <AvatarImage
                   src={recruiter?.avatarUrl || undefined}
                   alt={recruiter?.name || "Recruiter"}
-                  className="size-14 rounded-2xl object-cover"
+                  className="size-12 sm:size-14 rounded-2xl object-cover"
                 />
-                <AvatarFallback className="size-14 rounded-2xl bg-primary/15 text-primary text-base font-bold uppercase tracking-wider">
+                <AvatarFallback className="size-12 sm:size-14 rounded-2xl bg-primary/15 text-primary text-sm sm:text-base font-bold uppercase tracking-wider">
                   {getInitials(recruiter?.name || user?.email || "R")}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-bold tracking-tight">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-lg sm:text-xl font-bold tracking-tight">
                     {recruiter?.companyName || "Company"} Talent Portal
                   </h1>
-                  <Badge className="bg-primary/15 text-primary border-primary/25 text-[10px] py-0 px-2 font-semibold">
+                  <Badge className="bg-primary/15 text-primary border-primary/25 text-[10px] py-0.5 px-2 font-semibold whitespace-nowrap shrink-0">
                     Recruiter Verified
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-1 break-words">
                   {recruiter?.name} ({user?.email}) •{" "}
                   {recruiter?.designation || "Hiring Manager"}
                 </p>
@@ -379,7 +341,6 @@ export default function RecruiterDashboardPage() {
             </CardContent>
           </Card>
         </div>
-      </main>
     </div>
   );
 }

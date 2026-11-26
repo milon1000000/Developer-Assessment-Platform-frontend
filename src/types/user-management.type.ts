@@ -9,7 +9,8 @@ export interface IPlatformUser {
   email: string;
   role: UserRole;
   status: UserStatus;
-  isVerified: boolean;
+  emailVerified?: boolean;
+  isVerified?: boolean;
   isDeleted: boolean;
   createdAt: string;
   updatedAt: string;

@@ -11,8 +11,8 @@ export function getAllAuditLogs(
   params?: AuditLogQueryParams,
 ): Promise<AuditLogListResponse> {
   const query = new URLSearchParams();
-  if (params?.searchTerm) query.append("searchTerm", params.searchTerm);
-  if (params?.search) query.append("search", params.search);
+  const searchVal = params?.searchTerm || params?.search;
+  if (searchVal) query.append("searchTerm", searchVal);
   if (params?.action && params.action !== "ALL")
     query.append("action", params.action);
   if (params?.entity && params.entity !== "ALL")
@@ -24,15 +24,15 @@ export function getAllAuditLogs(
   if (params?.sortOrder) query.append("sortOrder", params.sortOrder);
 
   const qs = query.toString();
-  return apiClient(qs ? `/audit-log?${qs}` : "/audit-log");
+  return apiClient(qs ? `/audit-logs?${qs}` : "/audit-logs");
 }
 
 // 2. Get audit statistics
 export function getAuditStats(): Promise<AuditStatsResponse> {
-  return apiClient("/audit-log/stats");
+  return apiClient("/audit-logs/stats");
 }
 
 // 3. Get single audit log details by ID
 export function getAuditLogById(id: string): Promise<SingleAuditLogResponse> {
-  return apiClient(`/audit-log/${id}`);
+  return apiClient(`/audit-logs/${id}`);
 }

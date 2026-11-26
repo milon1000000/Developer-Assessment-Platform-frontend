@@ -127,9 +127,9 @@ export default function AdminAssessmentsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground flex items-center gap-2.5">
-              <span className="flex size-8 items-center justify-center rounded-xl bg-violet-600/15 border border-violet-500/30 text-violet-400">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-violet-600/15 border border-violet-500/30 text-violet-400">
                 <FileCheck2 className="size-4" />
               </span>
               <span>All Platform Assessments</span>

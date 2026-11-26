@@ -15,8 +15,11 @@ export function getAllUsers(
   params?: UserQueryParams,
 ): Promise<UserListResponse> {
   const query = new URLSearchParams();
-  if (params?.searchTerm) query.append("searchTerm", params.searchTerm);
-  if (params?.search) query.append("search", params.search);
+  const searchVal = params?.searchTerm || params?.search;
+  if (searchVal) {
+    query.append("searchTerm", searchVal);
+    query.append("search", searchVal);
+  }
   if (params?.role && params.role !== "ALL") query.append("role", params.role);
   if (params?.status && params.status !== "ALL")
     query.append("status", params.status);

@@ -1,4 +1,4 @@
-import { ofetch, type FetchOptions } from "ofetch";
+import { type FetchOptions, ofetch } from "ofetch";
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
@@ -10,7 +10,10 @@ export const setAuthToken = (token: string | null) => {
       document.cookie = `accessToken=${token}; path=/; max-age=604800; SameSite=Lax`;
     } else {
       localStorage.removeItem("accessToken");
-      document.cookie = "accessToken=; path=/; max-age=0; SameSite=Lax";
+      document.cookie =
+        "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+      document.cookie =
+        "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
     }
   }
 };
@@ -122,17 +125,28 @@ const apiClient = async <T = unknown>(
 
       // If refresh token is expired or invalid, redirect to login from protected views
       if (typeof window !== "undefined") {
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+
         const path = window.location.pathname;
-        const isAuthPage =
+        const isPublicOrAuthPage =
           path === "/" ||
+          path === "/about" ||
+          path.startsWith("/about/") ||
+          path === "/contact" ||
+          path.startsWith("/contact/") ||
           path === "/login" ||
           path === "/register" ||
           path === "/forgot-password" ||
           path === "/reset-password" ||
           path === "/account-verify" ||
-          path.startsWith("/auth/");
+          path.startsWith("/auth/") ||
+          path.startsWith("/assessment/take/") ||
+          path.startsWith("/candidate/assessment/");
 
-        if (!isAuthPage) {
+        if (!isPublicOrAuthPage) {
           window.location.href = `/login?error=${encodeURIComponent(
             "Session expired. Please log in again.",
           )}`;

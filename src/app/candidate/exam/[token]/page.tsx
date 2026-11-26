@@ -14,6 +14,11 @@ export default function CandidateLiveExamPage() {
   const token = params?.token as string;
 
   const startAssessmentMutation = useStartAssessment();
+  const { mutateAsync: startAssessment } = startAssessmentMutation;
+  const inFlightStartRef = React.useRef<{
+    token: string;
+    promise: ReturnType<typeof startAssessment>;
+  } | null>(null);
   const [examData, setExamData] =
     React.useState<IStartAssessmentResponse | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -22,8 +27,16 @@ export default function CandidateLiveExamPage() {
     if (!token) return;
 
     let isMounted = true;
-    startAssessmentMutation
-      .mutateAsync({ inviteToken: token })
+
+    // Deduplicate concurrent start calls (e.g. React StrictMode double-mount in dev)
+    if (inFlightStartRef.current?.token !== token) {
+      inFlightStartRef.current = {
+        token,
+        promise: startAssessment({ inviteToken: token }),
+      };
+    }
+
+    inFlightStartRef.current.promise
       .then((res) => {
         if (isMounted && res?.data) {
           setExamData(res.data);
@@ -31,6 +44,9 @@ export default function CandidateLiveExamPage() {
         }
       })
       .catch((err: unknown) => {
+        if (inFlightStartRef.current?.token === token) {
+          inFlightStartRef.current = null;
+        }
         if (isMounted) {
           const msg =
             (err as { response?: { _data?: { message?: string } } })?.response
@@ -44,7 +60,7 @@ export default function CandidateLiveExamPage() {
     return () => {
       isMounted = false;
     };
-  }, [token]);
+  }, [token, startAssessment]);
 
   if (startAssessmentMutation.isPending || (!examData && !error)) {
     return (

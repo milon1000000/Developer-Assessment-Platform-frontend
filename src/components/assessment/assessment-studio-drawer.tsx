@@ -117,7 +117,13 @@ export function AssessmentStudioDrawer({
       setMaxTabSwitches(assessmentToEdit.maxTabSwitches ?? 3);
       setExpiresAt(
         assessmentToEdit.expiresAt
-          ? new Date(assessmentToEdit.expiresAt).toISOString().split("T")[0]
+          ? (() => {
+              const d = new Date(assessmentToEdit.expiresAt);
+              const year = d.getFullYear();
+              const month = String(d.getMonth() + 1).padStart(2, "0");
+              const day = String(d.getDate()).padStart(2, "0");
+              return `${year}-${month}-${day}`;
+            })()
           : "",
       );
       setIsActive(assessmentToEdit.isActive ?? true);
@@ -206,7 +212,9 @@ export function AssessmentStudioDrawer({
       durationMinutes: Number(durationMinutes) || 60,
       passingScore: Number(passingScore) || 60,
       maxTabSwitches: Number(maxTabSwitches) || 3,
-      expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
+      expiresAt: expiresAt
+        ? new Date(`${expiresAt}T23:59:59.999`).toISOString()
+        : undefined,
       questions: attachedQuestions.map((q, idx) => ({
         ...q,
         orderIndex: idx,

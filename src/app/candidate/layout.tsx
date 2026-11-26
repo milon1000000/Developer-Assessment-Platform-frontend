@@ -3,6 +3,7 @@
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useCurrentUser } from "@/app/hooks/auth.hooks";
+import { setAuthToken } from "@/lib/apiClient";
 import { DashboardSidebar } from "@/components/layout/dashboard-sidebar";
 import { Loader2 } from "lucide-react";
 
@@ -26,16 +27,17 @@ export default function CandidateLayout({
   React.useEffect(() => {
     if (!isExamScreen && !isLoading) {
       if (!user || !role) {
-        router.replace(
-          `/login?redirect=${encodeURIComponent(pathname || "/candidate/dashboard")}`,
-        );
+        setAuthToken(null);
+        window.location.href = `/login?redirect=${encodeURIComponent(
+          pathname || "/candidate/dashboard",
+        )}`;
       } else if (role === "ADMIN") {
-        router.replace("/admin/dashboard");
+        window.location.href = "/admin/dashboard";
       } else if (role === "RECRUITER") {
-        router.replace("/recruiter/dashboard");
+        window.location.href = "/recruiter/dashboard";
       }
     }
-  }, [isExamScreen, isLoading, user, role, router, pathname]);
+  }, [isExamScreen, isLoading, user, role, pathname]);
 
   if (isExamScreen) {
     return <>{children}</>;
@@ -57,7 +59,12 @@ export default function CandidateLayout({
   if (!user || role !== "DEVELOPER") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="size-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="size-8 animate-spin text-primary" />
+          <p className="text-xs text-muted-foreground font-medium">
+            Redirecting to your workspace...
+          </p>
+        </div>
       </div>
     );
   }

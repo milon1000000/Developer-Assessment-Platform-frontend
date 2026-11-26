@@ -339,32 +339,16 @@ export function QuestionStudioDrawer({
     toast.info(`Reset ${info.label} boilerplate to default`);
   };
 
-  // Dynamic Test Case Handlers
-  const handleAddTestCase = () => {
-    setTestCases([
-      ...testCases,
-      {
-        input: "",
-        output: "",
-        isHidden: false,
-      },
-    ]);
-  };
-
-  const handleRemoveTestCase = (index: number) => {
-    if (testCases.length <= 1) {
-      toast.error("At least one testcase is required.");
-      return;
-    }
-    setTestCases(testCases.filter((_, i) => i !== index));
-  };
-
+  // Test Case Change Handler (Single Test Case)
   const handleTestCaseChange = (
     index: number,
     field: keyof TestCase,
     value: string | boolean,
   ) => {
     const updated = [...testCases];
+    if (!updated[index]) {
+      updated[index] = { input: "", output: "", isHidden: false };
+    }
     updated[index] = { ...updated[index], [field]: value };
     setTestCases(updated);
   };
@@ -381,16 +365,16 @@ export function QuestionStudioDrawer({
     e.preventDefault();
     setErrors({});
 
-    // Filter test cases: if user added blank rows at the end, clean them up
+    // Clean test case for coding questions (single test case)
     const cleanedTc =
       type === "CODING"
-        ? testCases
-            .map((tc) => ({
-              ...tc,
-              input: String(tc.input ?? "").trim(),
-              output: String(tc.output ?? "").trim(),
-            }))
-            .filter((tc, idx) => idx === 0 || tc.input || tc.output)
+        ? [
+            {
+              input: String(testCases[0]?.input ?? "").trim(),
+              output: String(testCases[0]?.output ?? "").trim(),
+              isHidden: Boolean(testCases[0]?.isHidden),
+            },
+          ]
         : undefined;
 
     // Filter mcq options
@@ -941,25 +925,29 @@ export function QuestionStudioDrawer({
                 )}
               </div>
 
-              {/* Dynamic Test Cases Builder */}
+              {/* Single Test Case Builder */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Test Cases *</Label>
+                    <Label>Test Case *</Label>
                     <p className="text-[11px] text-muted-foreground">
-                      Public samples vs hidden automated grading tests
+                      Input and expected output for automated code grading
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAddTestCase}
-                    className="h-7 text-xs gap-1 border-primary/40 text-primary hover:bg-primary/10"
-                  >
-                    <Plus className="size-3" />
-                    Add Test Case
-                  </Button>
+                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(testCases[0]?.isHidden)}
+                      onChange={(e) =>
+                        handleTestCaseChange(0, "isHidden", e.target.checked)
+                      }
+                      className="rounded border-border text-primary focus:ring-primary size-3.5"
+                    />
+                    <span className="flex items-center gap-1 font-semibold">
+                      <Lock className="size-2.5 text-amber-500" />
+                      Hidden Test Case
+                    </span>
+                  </label>
                 </div>
 
                 {errors.testCases && (
@@ -968,89 +956,37 @@ export function QuestionStudioDrawer({
                   </p>
                 )}
 
-                <div className="space-y-3">
-                  {testCases.map((tc, index) => (
-                    <div
-                      key={`testcase-row-${index}`}
-                      className="rounded-xl border border-border/80 bg-background/60 p-3.5 space-y-3"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-foreground">
-                          Test Case #{index + 1}
-                        </span>
-                        <div className="flex items-center gap-3">
-                          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={Boolean(tc.isHidden)}
-                              onChange={(e) =>
-                                handleTestCaseChange(
-                                  index,
-                                  "isHidden",
-                                  e.target.checked,
-                                )
-                              }
-                              className="rounded border-border text-primary focus:ring-primary size-3.5"
-                            />
-                            <span className="flex items-center gap-1 font-semibold">
-                              <Lock className="size-2.5 text-amber-500" />
-                              Hidden
-                            </span>
-                          </label>
-
-                          {testCases.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveTestCase(index)}
-                              className="text-muted-foreground hover:text-destructive p-1 cursor-pointer"
-                              title="Delete Test Case"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                            Input *
-                          </span>
-                          <Textarea
-                            rows={2}
-                            placeholder="e.g. nums = [2, 7], target = 9"
-                            value={tc.input}
-                            onChange={(e) =>
-                              handleTestCaseChange(
-                                index,
-                                "input",
-                                e.target.value,
-                              )
-                            }
-                            className="font-mono text-xs"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                            Expected Output *
-                          </span>
-                          <Textarea
-                            rows={2}
-                            placeholder="e.g. [0, 1]"
-                            value={tc.output}
-                            onChange={(e) =>
-                              handleTestCaseChange(
-                                index,
-                                "output",
-                                e.target.value,
-                              )
-                            }
-                            className="font-mono text-xs"
-                          />
-                        </div>
-                      </div>
+                <div className="rounded-xl border border-border/80 bg-background/60 p-3.5 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                        Input *
+                      </span>
+                      <Textarea
+                        rows={3}
+                        placeholder="e.g. nums = [2, 7, 11, 15], target = 9"
+                        value={testCases[0]?.input || ""}
+                        onChange={(e) =>
+                          handleTestCaseChange(0, "input", e.target.value)
+                        }
+                        className="font-mono text-xs"
+                      />
                     </div>
-                  ))}
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                        Expected Output *
+                      </span>
+                      <Textarea
+                        rows={3}
+                        placeholder="e.g. [0, 1]"
+                        value={testCases[0]?.output || ""}
+                        onChange={(e) =>
+                          handleTestCaseChange(0, "output", e.target.value)
+                        }
+                        className="font-mono text-xs"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

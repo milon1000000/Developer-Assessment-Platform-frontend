@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useCurrentUser } from "@/app/hooks/auth.hooks";
 import {
   useAllUsers,
   useApproveRecruiterApplication,
@@ -67,6 +68,7 @@ export default function AdminUsersPage() {
 
   // Queries
   const { data: usersData, isLoading: isUsersLoading } = useAllUsers({
+    searchTerm: search.trim() || undefined,
     search: search.trim() || undefined,
     role: selectedRole !== "ALL" ? selectedRole : undefined,
     status: selectedStatus !== "ALL" ? selectedStatus : undefined,
@@ -74,6 +76,10 @@ export default function AdminUsersPage() {
 
   const { data: appsData, isLoading: isAppsLoading } =
     usePendingRecruiterApplications();
+  const { data: currentUserData } = useCurrentUser();
+  const currentUserId =
+    (currentUserData?.data as any)?.user?.id ||
+    (currentUserData?.data as any)?.id;
 
   // Mutations
   const changeStatusMutation = useChangeUserStatus();
@@ -83,6 +89,25 @@ export default function AdminUsersPage() {
 
   const users = usersData?.data || [];
   const applications = appsData?.data || [];
+
+  const displayUsers = React.useMemo(() => {
+    if (!search.trim()) return users;
+    const term = search.trim().toLowerCase();
+    return users.filter((u) => {
+      const email = u.email?.toLowerCase() || "";
+      const devName = u.developerProfile?.name?.toLowerCase() || "";
+      const recName = u.recruiterProfile?.name?.toLowerCase() || "";
+      const compName = u.recruiterProfile?.companyName?.toLowerCase() || "";
+      const adminName = u.adminProfile?.name?.toLowerCase() || "";
+      return (
+        email.includes(term) ||
+        devName.includes(term) ||
+        recName.includes(term) ||
+        compName.includes(term) ||
+        adminName.includes(term)
+      );
+    });
+  }, [users, search]);
 
   const handleConfirmStatusChange = async () => {
     if (!confirmStatusUser) return;
@@ -151,47 +176,7 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <Link href="/admin/dashboard" className="flex items-center gap-2">
-              <div className="flex size-9 items-center justify-center rounded-xl bg-destructive text-destructive-foreground shadow-md shadow-destructive/20">
-                <ShieldAlert className="size-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-base font-bold tracking-tight">
-                  DevAssess{" "}
-                  <span className="text-destructive text-xs font-semibold">
-                    ADMIN
-                  </span>
-                </span>
-                <span className="text-[10px] text-muted-foreground font-medium -mt-1">
-                  User Directory &amp; RBAC
-                </span>
-              </div>
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Link href="/admin/dashboard">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 px-3 text-xs font-semibold cursor-pointer"
-              >
-                <ArrowLeft className="size-3.5" />
-                <span>Dashboard</span>
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="space-y-6">
         {/* Page Title & Main Tabs */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
@@ -204,7 +189,7 @@ export default function AdminUsersPage() {
             </p>
           </div>
 
-          <div className="flex rounded-xl bg-muted/60 p-1 border border-border/60">
+          <div className="flex flex-wrap sm:flex-nowrap rounded-xl bg-muted/60 p-1 border border-border/60 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setActiveTab("users")}
@@ -294,7 +279,7 @@ export default function AdminUsersPage() {
                     Loading platform directory...
                   </p>
                 </div>
-              ) : users.length === 0 ? (
+              ) : displayUsers.length === 0 ? (
                 <div className="p-12 text-center space-y-2">
                   <Users className="size-8 text-muted-foreground mx-auto" />
                   <p className="text-sm font-bold text-foreground">
@@ -318,7 +303,7 @@ export default function AdminUsersPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50">
-                      {users.map((u) => {
+                      {displayUsers.map((u) => {
                         const name =
                           u.adminProfile?.name ||
                           u.recruiterProfile?.name ||
@@ -381,15 +366,21 @@ export default function AdminUsersPage() {
                                   "text-[10px] font-bold",
                                   u.status === "ACTIVE"
                                     ? "border-emerald-500/40 text-emerald-500 bg-emerald-500/10"
-                                    : "border-rose-500/40 text-rose-500 bg-rose-500/10",
+                                    : u.status === "PENDING"
+                                      ? "border-amber-500/40 text-amber-500 bg-amber-500/10"
+                                      : "border-rose-500/40 text-rose-500 bg-rose-500/10",
                                 )}
                               >
-                                {u.status === "ACTIVE" ? "Active" : "Blocked"}
+                                {u.status === "ACTIVE"
+                                  ? "Active"
+                                  : u.status === "PENDING"
+                                    ? "Pending"
+                                    : "Blocked"}
                               </Badge>
                             </td>
 
                             <td className="py-3 px-4">
-                              {u.isVerified ? (
+                              {Boolean(u.emailVerified ?? u.isVerified) ? (
                                 <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-500">
                                   <CheckCircle2 className="size-3.5" /> Verified
                                 </span>
@@ -407,30 +398,36 @@ export default function AdminUsersPage() {
 
                             <td className="py-3 px-4 text-right">
                               <div className="flex items-center justify-end gap-1.5">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setConfirmStatusUser(u)}
-                                  disabled={changeStatusMutation.isPending}
-                                  className={cn(
-                                    "h-7 px-2 text-xs font-semibold cursor-pointer",
-                                    u.status === "ACTIVE"
-                                      ? "text-rose-500 hover:bg-rose-500/10 hover:text-rose-600"
-                                      : "text-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-600",
-                                  )}
-                                >
-                                  {u.status === "ACTIVE" ? (
-                                    <>
-                                      <Ban className="size-3 mr-1" />
-                                      Block
-                                    </>
-                                  ) : (
-                                    <>
-                                      <UserCheck className="size-3 mr-1" />
-                                      Activate
-                                    </>
-                                  )}
-                                </Button>
+                                {u.id === currentUserId ? (
+                                  <span className="text-[10px] font-semibold text-muted-foreground px-2 py-1 bg-muted/60 rounded-md">
+                                    You
+                                  </span>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setConfirmStatusUser(u)}
+                                    disabled={changeStatusMutation.isPending}
+                                    className={cn(
+                                      "h-7 px-2 text-xs font-semibold cursor-pointer",
+                                      u.status === "ACTIVE"
+                                        ? "text-rose-500 hover:bg-rose-500/10 hover:text-rose-600"
+                                        : "text-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-600",
+                                    )}
+                                  >
+                                    {u.status === "ACTIVE" ? (
+                                      <>
+                                        <Ban className="size-3 mr-1" />
+                                        Block
+                                      </>
+                                    ) : (
+                                      <>
+                                        <UserCheck className="size-3 mr-1" />
+                                        Activate
+                                      </>
+                                    )}
+                                  </Button>
+                                )}
 
                                 <Button
                                   variant="ghost"
@@ -553,7 +550,6 @@ export default function AdminUsersPage() {
             )}
           </div>
         )}
-      </main>
 
       {/* Reject Reason Modal */}
       {rejectingAppId && (
@@ -600,6 +596,107 @@ export default function AdminUsersPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Status Change Confirmation Modal (Block / Activate) */}
+      {confirmStatusUser && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in-0 duration-200"
+        >
+          <div
+            className="fixed inset-0"
+            onClick={() => setConfirmStatusUser(null)}
+            aria-label="Backdrop"
+          />
+          <div className="relative z-10 rounded-3xl border border-border bg-card p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className={cn(
+                    "size-11 rounded-2xl flex items-center justify-center",
+                    confirmStatusUser.status === "ACTIVE"
+                      ? "bg-rose-500/15 text-rose-500"
+                      : "bg-emerald-500/15 text-emerald-500",
+                  )}
+                >
+                  {confirmStatusUser.status === "ACTIVE" ? (
+                    <Ban className="size-5" />
+                  ) : (
+                    <UserCheck className="size-5" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">
+                    {confirmStatusUser.status === "ACTIVE"
+                      ? "Block User Account"
+                      : "Activate User Account"}
+                  </h3>
+                  <p className="text-xs text-muted-foreground font-mono">
+                    {confirmStatusUser.email}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfirmStatusUser(null)}
+                className="size-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {confirmStatusUser.status === "ACTIVE" ? (
+                <>
+                  Are you sure you want to block this user? Once blocked, their
+                  account will be suspended and they will not be able to log in,
+                  take assessments, or access platform features.
+                </>
+              ) : (
+                <>
+                  Are you sure you want to activate this user? Their account
+                  will be restored to active status and they can resume platform
+                  access.
+                </>
+              )}
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border/50">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmStatusUser(null)}
+                className="h-9 px-4 text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleConfirmStatusChange}
+                disabled={changeStatusMutation.isPending}
+                className={cn(
+                  "h-9 px-4 text-xs font-bold gap-1.5 cursor-pointer text-white",
+                  confirmStatusUser.status === "ACTIVE"
+                    ? "bg-rose-600 hover:bg-rose-500 shadow-md shadow-rose-600/20"
+                    : "bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/20",
+                )}
+              >
+                {changeStatusMutation.isPending && (
+                  <Loader2 className="size-3.5 animate-spin" />
+                )}
+                <span>
+                  {confirmStatusUser.status === "ACTIVE"
+                    ? "Confirmed"
+                    : "Confirm Activate"}
+                </span>
+              </Button>
+            </div>
           </div>
         </div>
       )}

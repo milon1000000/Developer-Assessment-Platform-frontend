@@ -2,24 +2,15 @@
 
 import {
   CheckCircle2,
-  Code2,
   Cpu,
-  LayoutDashboard,
-  Loader2,
-  LogIn,
-  LogOut,
   ShieldCheck,
   Sparkles,
   Terminal,
 } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type * as React from "react";
-import { toast } from "sonner";
-import { useCurrentUser, useLogout } from "@/app/hooks/auth.hooks";
+import { PublicFooter } from "@/components/layout/public-footer";
+import { PublicNavbar } from "@/components/layout/public-navbar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 interface AuthShellProps {
   children: React.ReactNode;
@@ -34,51 +25,6 @@ export function AuthShell({
   subtitle,
   badgeText = "Enterprise Assessment Platform",
 }: AuthShellProps) {
-  const router = useRouter();
-  const { data: currentUserData, isLoading: isUserLoading } = useCurrentUser();
-  const logoutMutation = useLogout();
-
-  const rawUser = currentUserData?.data as {
-    user?: {
-      email?: string;
-      role?: string;
-      name?: string;
-      developerProfile?: { name?: string };
-      recruiterProfile?: { name?: string };
-      adminProfile?: { name?: string };
-    };
-    profile?: { name?: string };
-    adminProfile?: { name?: string };
-    recruiterProfile?: { name?: string };
-    developerProfile?: { name?: string };
-    role?: string;
-    email?: string;
-    name?: string;
-  } | null;
-
-  const user = rawUser?.user || rawUser;
-  const isAuthenticated = !isUserLoading && !!(user?.email || rawUser?.email);
-  const role = user?.role || rawUser?.role;
-
-  const dashboardHref =
-    role === "ADMIN"
-      ? "/admin/dashboard"
-      : role === "RECRUITER"
-        ? "/recruiter/dashboard"
-        : "/candidate/dashboard";
-
-  const handleLogout = async () => {
-    try {
-      await logoutMutation.mutateAsync();
-      toast.success("Logged out successfully", {
-        description: "You have been signed out of your account.",
-      });
-      router.push("/login");
-    } catch {
-      toast.error("Logout failed. Please try again.");
-    }
-  };
-
   return (
     <div className="relative min-h-screen w-full flex flex-col justify-between overflow-x-hidden bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary">
       {/* Background Ambient Glows & Grid Pattern */}
@@ -96,86 +42,8 @@ export function AuthShell({
         />
       </div>
 
-      {/* Top Navigation Bar */}
-      <header className="relative z-10 w-full border-b border-border/40 bg-background/70 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link
-            href="/"
-            className="flex items-center gap-2.5 transition-opacity hover:opacity-90"
-          >
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/25">
-              <Code2 className="size-5" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-base font-bold tracking-tight text-foreground flex items-center gap-1.5">
-                DevAssess
-                <span className="rounded-sm bg-primary/15 px-1.5 py-0.2 text-[10px] font-semibold text-primary">
-                  PRO
-                </span>
-              </span>
-              <span className="text-[10px] text-muted-foreground font-medium -mt-1">
-                Developer Assessment Platform
-              </span>
-            </div>
-          </Link>
-
-          <div className="flex items-center gap-2.5 sm:gap-3">
-            <Badge
-              variant="brand"
-              className="hidden sm:inline-flex py-1 px-3 gap-1.5"
-            >
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Anti-Cheat Engine Active
-            </Badge>
-
-            {/* Dark / Light Mode Switcher */}
-            <ThemeToggle />
-
-            {/* Login / Dashboard & Logout Toggle Button */}
-            {isAuthenticated ? (
-              <div className="flex items-center gap-2">
-                <Link href={dashboardHref}>
-                  <Button
-                    size="sm"
-                    className="h-8 gap-1.5 px-3 text-xs font-semibold shadow-xs bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer transition-all hover:scale-[1.02]"
-                    title="Go to Dashboard"
-                  >
-                    <LayoutDashboard className="size-3.5" />
-                    <span>Dashboard</span>
-                  </Button>
-                </Link>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                  disabled={logoutMutation.isPending}
-                  className="h-8 gap-1.5 px-3 text-xs font-semibold border-border/80 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors cursor-pointer"
-                  title="Log out from DevAssess"
-                >
-                  {logoutMutation.isPending ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <LogOut className="size-3.5" />
-                  )}
-                  <span className="hidden sm:inline">Logout</span>
-                </Button>
-              </div>
-            ) : (
-              <Link href="/login">
-                <Button
-                  size="sm"
-                  className="h-8 gap-1.5 px-3 text-xs font-semibold shadow-xs cursor-pointer"
-                  title="Sign in to your account"
-                >
-                  <LogIn className="size-3.5" />
-                  <span>Login</span>
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
-      </header>
+      {/* Shared Top Navigation Bar */}
+      <PublicNavbar />
 
       {/* Main Auth Split Container */}
       <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 items-center justify-center p-4 sm:p-6 lg:p-8">
@@ -214,7 +82,7 @@ export function AuthShell({
                     Sandboxed Code Runner
                   </h4>
                   <p className="text-[11px] text-muted-foreground">
-                    High-performance execution engine supporting 30+ languages
+                    High-performance execution engine supporting 14+ languages
                     with memory and time caps.
                   </p>
                 </div>
@@ -279,25 +147,8 @@ export function AuthShell({
         </div>
       </main>
 
-      {/* Minimal Footer */}
-      <footer className="relative z-10 w-full border-t border-border/40 bg-background/50 py-4 text-center text-xs text-muted-foreground backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 sm:flex-row sm:px-6 lg:px-8">
-          <p>
-            © {new Date().getFullYear()} DevAssess Inc. All rights reserved.
-          </p>
-          <div className="flex items-center gap-4">
-            <Link href="#" className="hover:underline hover:text-foreground">
-              Privacy Policy
-            </Link>
-            <Link href="#" className="hover:underline hover:text-foreground">
-              Terms of Service
-            </Link>
-            <Link href="#" className="hover:underline hover:text-foreground">
-              Security
-            </Link>
-          </div>
-        </div>
-      </footer>
+      {/* Shared Footer */}
+      <PublicFooter />
     </div>
   );
 }

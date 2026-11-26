@@ -81,8 +81,8 @@ export default function AdminSubmissionsPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-5">
         <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-black tracking-tight text-foreground">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
               Assessment Submissions Audit
             </h1>
             <Badge
@@ -98,7 +98,7 @@ export default function AdminSubmissionsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
           <select
             value={selectedAssessmentId}
             onChange={(e) => {
@@ -106,7 +106,7 @@ export default function AdminSubmissionsPage() {
               setFilters((prev) => ({ ...prev, page: 1 }));
             }}
             disabled={isAssessmentsLoading || assessments.length === 0}
-            className="h-10 rounded-xl border border-border/80 bg-card px-3 text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer min-w-[200px]"
+            className="h-10 rounded-xl border border-border/80 bg-card px-3 text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer min-w-0 flex-1 sm:flex-initial sm:min-w-[200px]"
           >
             {assessments.length === 0 ? (
               <option value="">No Assessments Available</option>

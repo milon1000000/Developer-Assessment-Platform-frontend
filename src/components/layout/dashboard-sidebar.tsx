@@ -17,6 +17,7 @@ import {
   Code2,
   FileCheck2,
   GraduationCap,
+  Home,
   LayoutDashboard,
   LogOut,
   Mail,
@@ -47,6 +48,11 @@ const ADMIN_NAV_SECTIONS: NavSection[] = [
   {
     section: "Core",
     items: [
+      {
+        title: "Home",
+        href: "/",
+        icon: Home,
+      },
       {
         title: "Dashboard",
         href: "/admin/dashboard",
@@ -103,6 +109,11 @@ const RECRUITER_NAV_SECTIONS: NavSection[] = [
     section: "Hiring Suite",
     items: [
       {
+        title: "Home",
+        href: "/",
+        icon: Home,
+      },
+      {
         title: "Dashboard",
         href: "/recruiter/dashboard",
         icon: LayoutDashboard,
@@ -150,6 +161,11 @@ const DEVELOPER_NAV_SECTIONS: NavSection[] = [
   {
     section: "Developer Portal",
     items: [
+      {
+        title: "Home",
+        href: "/",
+        icon: Home,
+      },
       {
         title: "Dashboard",
         href: "/candidate/dashboard",
@@ -425,8 +441,10 @@ export function DashboardSidebar({
                   {sec.items.map((item) => {
                     const Icon = item.icon;
                     const isActive =
-                      pathname === item.href ||
-                      pathname?.startsWith(`${item.href}/`);
+                      item.href === "/"
+                        ? pathname === "/"
+                        : pathname === item.href ||
+                          pathname?.startsWith(`${item.href}/`);
 
                     return (
                       <Link

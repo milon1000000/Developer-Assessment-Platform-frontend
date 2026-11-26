@@ -143,7 +143,7 @@ export default function CandidateDashboardPage() {
     <div className="space-y-8">
       {/* Top Bar Status Indicator */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border/50">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge
             variant="brand"
             className="text-[11px] py-0.5 px-2.5 font-semibold"
@@ -168,30 +168,30 @@ export default function CandidateDashboardPage() {
       </div>
 
       {/* Profile Welcome Banner */}
-      <div className="rounded-2xl border border-border/70 bg-gradient-to-r from-card/90 via-card/70 to-card/90 p-6 shadow-xl backdrop-blur-md relative overflow-hidden">
+      <div className="rounded-2xl border border-border/70 bg-gradient-to-r from-card/90 via-card/70 to-card/90 p-4 sm:p-6 shadow-xl backdrop-blur-md relative overflow-hidden">
         <div className="absolute -right-20 -top-20 size-60 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
-          <div className="flex items-center gap-4">
-            <Avatar className="size-14 rounded-2xl border border-primary/25 bg-primary/10 text-primary shadow-sm">
+          <div className="flex items-start sm:items-center gap-3.5 sm:gap-4 min-w-0">
+            <Avatar className="size-12 sm:size-14 shrink-0 rounded-2xl border border-primary/25 bg-primary/10 text-primary shadow-sm">
               <AvatarImage
                 src={developer?.avatarUrl || undefined}
                 alt={developer?.name || "Developer"}
-                className="size-14 rounded-2xl object-cover"
+                className="size-12 sm:size-14 rounded-2xl object-cover"
               />
-              <AvatarFallback className="size-14 rounded-2xl bg-primary/15 text-primary text-base font-bold uppercase tracking-wider">
+              <AvatarFallback className="size-12 sm:size-14 rounded-2xl bg-primary/15 text-primary text-sm sm:text-base font-bold uppercase tracking-wider">
                 {getInitials(developer?.name || user?.email || "D")}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-lg sm:text-xl font-bold tracking-tight">
                   Welcome back, {developer?.name || "Developer"}
                 </h1>
-                <Badge className="bg-primary/15 text-primary border-primary/25 text-[10px] py-0 px-2 font-semibold">
+                <Badge className="bg-primary/15 text-primary border-primary/25 text-[10px] py-0.5 px-2 font-semibold whitespace-nowrap shrink-0">
                   Developer Verified
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-muted-foreground mt-1 break-words">
                 {user?.email} •{" "}
                 {developer?.experienceYears
                   ? `${developer.experienceYears} Years Experience`

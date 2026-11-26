@@ -27,17 +27,22 @@ function parseJwtPayload(
   }
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Read accessToken or refreshToken from cookies
-  const accessToken =
-    request.cookies.get("accessToken")?.value ||
-    request.cookies.get("refreshToken")?.value;
+  const accessToken = request.cookies.get("accessToken")?.value;
+  const refreshToken = request.cookies.get("refreshToken")?.value;
 
-  const payload = accessToken ? parseJwtPayload(accessToken) : null;
+  const accessPayload = accessToken ? parseJwtPayload(accessToken) : null;
+  const refreshPayload = refreshToken ? parseJwtPayload(refreshToken) : null;
+
+  // Active payload preferentially from valid access token, fallback to refresh token
+  const payload = accessPayload || refreshPayload;
   const role = payload?.role;
   const isAuthenticated = Boolean(payload && role);
+
+  const hasSearchParams = request.nextUrl.searchParams.toString().length > 0;
 
   const isAuthRoute =
     pathname.startsWith("/login") ||
@@ -53,8 +58,8 @@ export function middleware(request: NextRequest) {
     !pathname.startsWith("/candidate/assessment/") &&
     !pathname.startsWith("/candidate/exam/");
 
-  // 1. If an already authenticated user attempts to visit public auth pages, redirect to their role dashboard
-  if (isAuthRoute && isAuthenticated) {
+  // 1. If an authenticated user visits auth pages, redirect to dashboard UNLESS there are search params (redirect/error)
+  if (isAuthRoute && isAuthenticated && !hasSearchParams) {
     if (role === "ADMIN") {
       return NextResponse.redirect(new URL("/admin/dashboard", request.url));
     }
@@ -71,7 +76,10 @@ export function middleware(request: NextRequest) {
     if (!isAuthenticated) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(loginUrl);
+      const res = NextResponse.redirect(loginUrl);
+      res.cookies.delete("accessToken");
+      res.cookies.delete("refreshToken");
+      return res;
     }
     if (role !== "ADMIN") {
       if (role === "RECRUITER") {
@@ -90,7 +98,10 @@ export function middleware(request: NextRequest) {
     if (!isAuthenticated) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(loginUrl);
+      const res = NextResponse.redirect(loginUrl);
+      res.cookies.delete("accessToken");
+      res.cookies.delete("refreshToken");
+      return res;
     }
     if (role !== "RECRUITER" && role !== "ADMIN") {
       return NextResponse.redirect(
@@ -104,7 +115,10 @@ export function middleware(request: NextRequest) {
     if (!isAuthenticated) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(loginUrl);
+      const res = NextResponse.redirect(loginUrl);
+      res.cookies.delete("accessToken");
+      res.cookies.delete("refreshToken");
+      return res;
     }
     if (role === "ADMIN") {
       return NextResponse.redirect(new URL("/admin/dashboard", request.url));
