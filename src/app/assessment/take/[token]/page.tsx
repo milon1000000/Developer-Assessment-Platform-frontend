@@ -1,11 +1,5 @@
 "use client";
 
-import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
-import { verifyAssessmentInviteToken } from "@/api/assessment.api";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import type { IAssessmentInvite } from "@/types/assessment.type";
 import {
   AlertCircle,
   AlertTriangle,
@@ -22,6 +16,12 @@ import {
   Sparkles,
   Terminal,
 } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import * as React from "react";
+import { verifyAssessmentInviteToken } from "@/api/assessment.api";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import type { IAssessmentInvite } from "@/types/assessment.type";
 
 export default function CandidateAssessmentGatewayPage() {
   const params = useParams();
@@ -114,7 +114,7 @@ export default function CandidateAssessmentGatewayPage() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-primary/20">
       {/* Top Simple Header */}
-      <header className="border-b border-border/80 bg-card/60 backdrop-blur-md px-6 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-30 border-b border-border/80 bg-card/85 backdrop-blur-md px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="size-9 rounded-xl bg-gradient-to-tr from-primary to-indigo-600 flex items-center justify-center font-mono font-bold text-white shadow-md text-sm">
             &lt;/&gt;

@@ -8,7 +8,7 @@ export default function MarketingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative min-h-screen w-full flex flex-col justify-between overflow-x-hidden bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary">
+    <div className="relative min-h-screen w-full flex flex-col justify-between overflow-x-clip bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary">
       {/* Background Ambient Glows & Grid Pattern */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[130px] dark:bg-primary/15" />
