@@ -6,42 +6,38 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!mounted) {
-    return (
-      <Button
-        variant="outline"
-        size="icon-sm"
-        className="rounded-full opacity-0 pointer-events-none"
-        aria-hidden="true"
-      >
-        <Sun className="h-4 w-4" />
-      </Button>
-    );
-  }
+  const isDark = resolvedTheme === "dark";
 
-  const isDark = theme === "dark";
+  const handleToggle = () => {
+    const isCurrentlyDark = resolvedTheme
+      ? resolvedTheme === "dark"
+      : document.documentElement.classList.contains("dark");
+    setTheme(isCurrentlyDark ? "light" : "dark");
+  };
 
   return (
     <Button
+      type="button"
       variant="outline"
       size="icon-sm"
-      className="rounded-full border-border/60 bg-background/60 backdrop-blur-md hover:bg-muted transition-all duration-200"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      title={`Switch to ${isDark ? "light" : "dark"} mode`}
-      aria-label="Toggle theme"
+      className="group rounded-full border-border/60 bg-background/80 text-foreground backdrop-blur-md hover:bg-muted transition-all duration-200 cursor-pointer"
+      onClick={handleToggle}
+      title={
+        mounted ? `Switch to ${isDark ? "light" : "dark"} mode` : "Toggle theme"
+      }
+      aria-label={
+        mounted ? `Switch to ${isDark ? "light" : "dark"} mode` : "Toggle theme"
+      }
     >
-      {isDark ? (
-        <Sun className="h-4 w-4 text-amber-400 transition-transform hover:rotate-45" />
-      ) : (
-        <Moon className="h-4 w-4 text-slate-700 transition-transform hover:-rotate-12" />
-      )}
+      <Sun className="hidden h-4 w-4 text-amber-400 transition-transform duration-200 group-hover:rotate-45 dark:block" />
+      <Moon className="block h-4 w-4 text-slate-700 transition-transform duration-200 group-hover:-rotate-12 dark:hidden" />
     </Button>
   );
 }
